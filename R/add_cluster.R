@@ -3,26 +3,22 @@
 #' @param object SummarizedExperiment object
 #' @param cluster_type type of cluster to generate: "pval", "pval_bins", "bins"
 #' @param contrastdefs contrast definition(s) for which cluster should be generated
-#' @param sig_level significance cutoff for p-value based cluster
-#' @param k number of bins for bin cluster
+#' @param breaks numeric vector indicating p-value cutoffs for "pval_bins"
+#' @param sig_level significance cutoff for p-value based cluster "pval"
+#' @param k number of bins for bin cluster "bins"
 #'
 #' @return updated SummarizedExperiment object
 #' @export
+#'
 #' @import magrittr
 #' @import dplyr
-#' @import tibble
-#' @import assertive.types
-#' @import assertive.numbers
-#' @import assertthat
-#' @import S4Vectors
 #' @import autonomics
-#' @import autonomics
-#'
 #'
 #' @examples add_cluster(object)
 add_cluster <- function (object,
                          cluster_type = c("pval", "pval_bins", "bins"),
                          contrastdefs = NULL,
+                         breaks = c(0.05, 0.10, 0.20),
                          sig_level = 0.05,
                          k = 5) {
 

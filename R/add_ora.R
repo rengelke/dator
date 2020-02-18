@@ -1,10 +1,24 @@
 
-
-
-
-
+#' Run over-representation analysis and add results
+#'
+#' @param object SummarizedExperiment
+#' @param db annotation database to use: "wiki", "kegg", "go", "msigH", "msigC1", "msigC2"
+#' @param cluster_type type of cluster to generate: "pval", "pval_bins", "bins"
+#' @param contrastdefs contrast definition(s) for which to perform analysis
+#' @param sig_level significance cutoff for p-value based cluster "pval"
+#' @param k number of bins for bin cluster "bins"
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @import magrittr
+#' @import dplyr
+#' @import autonomics
+#'
+#' @examples add_ora(object, db = "wiki")
 add_ora <- function(object,
-                    db = c("wiki", "kegg", "go"),
+                    db = c("wiki", "kegg", "go", "msigH", "msigC2", "msigC5"),
                     cluster_type = c("pval", "pval_bins", "bins"),
                     contrastdefs = NULL,
                     sig_level = 0.05,
@@ -18,26 +32,32 @@ add_ora <- function(object,
     }
     assertive.types::assert_is_any_of(db, classes = c("NULL", "character"))
     assertive.types::assert_is_any_of(contrastdefs, classes = c("NULL", "character"))
-    db <- match.arg(db, c("wiki", "kegg", "go"), several.ok = TRUE)
+    db <- match.arg(db, c("wiki", "kegg", "go",
+                          "msigH", "msigC2", "msigC5"), several.ok = FALSE)
 
     if (is.null(contrastdefs)) {
         contrastdefs <- names(object@metadata$contrastdefs)
     }
 
-    organism <- autonomics.annotate::infer_organism(fdata(object)$feature_id[1:3], "uniprot")
+    organism <- autonomics.annotate::infer_organism(fdata(object)$feature_id[1:3],
+                                                    "uniprot")
     if (organism == "Homo sapiens") {
-        organism <- "hsa"
+        organism_shrt <- "hsa"
         org_db <- "org.Hs.eg.db"
-        if ("wiki" %in% db) wiki_data <- dator:::wiki_human
+        if (db == "wiki") db_wiki <- dator:::wiki_human
+        if (db == "msigH") db_msigH <- dator:::msigdb_H_human
+        if (db == "msigC2") db_msigC1 <- dator:::msigdb_C2_human
+        if (db == "msigC5") db_msigC2 <- dator:::msigdb_C5_human
     }
     if (organism == "Mus musculus") {
-        organism <- "mmu"
+        organism_shrt <- "mmu"
         org_db <- "org.Mm.eg.db"
-        if ("wiki" %in% db) wiki_data <- dator:::wiki_mouse
+        if (db == "wiki") db_wiki <- dator:::wiki_mouse
+        if (db == "msigH") db_msigH <- dator:::msigdb_H_mouse
+        if (db == "msigC2") db_msigC2 <- dator:::msigdb_C2_mouse
+        if (db == "msigC5") db_msigC5 <- dator:::msigdb_C5_mouse
     }
 
-    wpid2gene <- wiki_data %>% dplyr::select(wpid, gene) #TERM2GENE
-    wpid2name <- wiki_data %>% dplyr::select(wpid, name) #TERM2NAME
 
 
     object <- add_cluster(object,
@@ -78,7 +98,7 @@ add_ora <- function(object,
 
 
 
-            if (db == "wiki") {
+            if (any(db %in% "wiki")) {
 
                 ora_wiki <- no_of_groups %>% lapply(function (z) {
 
@@ -90,8 +110,10 @@ add_ora <- function(object,
                                               universe = gene_universe,
                                               pvalueCutoff = 1,
                                               qvalueCutoff = 1,
-                                              TERM2GENE = wpid2gene,
-                                              TERM2NAME = wpid2name)@result %>%
+                                              TERM2GENE = db_wiki %>%
+                                                  dplyr::select(wpid, gene),
+                                              TERM2NAME = db_wiki %>%
+                                                  dplyr::select(wpid, name))@result %>%
                         dplyr::mutate(logp = -1*log(pvalue, 2),
                                       !!cluster_col := z)
 
@@ -101,7 +123,7 @@ add_ora <- function(object,
             }
 
 
-            if (db == "kegg") {
+            if (any(db %in% "kegg")) {
 
                 ora_kegg <- no_of_groups %>% lapply(function (z) {
 
@@ -111,7 +133,7 @@ add_ora <- function(object,
 
                     clusterProfiler::enrichKEGG(gene = gene_oi,
                                                 universe = gene_universe,
-                                                organism = organism,
+                                                organism = organism_shrt,
                                                 pvalueCutoff = 1,
                                                 qvalueCutoff = 1,
                                                 use_internal_data = FALSE)@result %>%
@@ -124,7 +146,7 @@ add_ora <- function(object,
             }
 
 
-            if (db == "go") {
+            if (any(db %in% "go")) {
 
                 ora_go <- no_of_groups %>% lapply(function (z) {
 
@@ -147,134 +169,87 @@ add_ora <- function(object,
 
             }
 
+            if (any(db %in% "msigH")) {
+
+                ora_msigH <- no_of_groups %>% lapply(function (z) {
+
+                    gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
+                        ENTREZID %>%
+                        dator::tidy_keys()
+
+                    clusterProfiler::enricher(gene = gene_oi,
+                                              universe = gene_universe,
+                                              TERM2GENE = db_msigH %>%
+                                                  dplyr::select(gs_name, entrez_gene),
+                                              pvalueCutoff = 1,
+                                              qvalueCutoff = 1)@result %>%
+                        dplyr::mutate(logp = -1*log(pvalue, 2),
+                                      !!cluster_col := z)
+
+                })
+                ora_msigH %<>% do.call(rbind, .)
+
+            }
+
+            if (any(db %in% "msigC2")) {
+
+                ora_msigC2 <- no_of_groups %>% lapply(function (z) {
+
+                    gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
+                        ENTREZID %>%
+                        dator::tidy_keys()
+
+                    clusterProfiler::enricher(gene = gene_oi,
+                                              universe = gene_universe,
+                                              TERM2GENE = db_msigC2 %>%
+                                                  dplyr::select(gs_name, entrez_gene),
+                                              pvalueCutoff = 1,
+                                              qvalueCutoff = 1)@result %>%
+                        dplyr::mutate(logp = -1*log(pvalue, 2),
+                                      !!cluster_col := z)
+
+                })
+                ora_msigC2 %<>% do.call(rbind, .)
+
+            }
 
 
+            if (any(db %in% "msigC5")) {
 
-        }
+                ora_msigC5 <- no_of_groups %>% lapply(function (z) {
 
+                    gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
+                        ENTREZID %>%
+                        dator::tidy_keys()
 
+                    clusterProfiler::enricher(gene = gene_oi,
+                                              universe = gene_universe,
+                                              TERM2GENE = db_msigC5 %>%
+                                                  dplyr::select(gs_name, entrez_gene),
+                                              pvalueCutoff = 1,
+                                              qvalueCutoff = 1)@result %>%
+                        dplyr::mutate(logp = -1*log(pvalue, 2),
+                                      !!cluster_col := z)
 
+                })
+                ora_msigC5 %<>% do.call(rbind, .)
 
+            }
 
-    })
+            mget(ls(pattern = "ora_"))
 
+        })
 
-        no_of_grps
-
-        # -----------------------------------------------------------------------------------
-        if (dbtype == "wiki")
-        {
-            wiki_ora_result <- no_of_grps %>% lapply(., function(x)
-            {
-                gene_oi <-
-                    analysis_data %>% dplyr::filter(cluster_id == x & ENTREZID != "")
-                # subset_gene_clusts <- subset(analysis_data, select = grep("clust_", names(analysis_data)))
-                # gene_oi <- analysis_data %>% dplyr::filter(subset_gene_clusts == x)
-                wiki_enrichr_result <- enricher(
-                    gene = gene_oi$ENTREZID,
-                    universe = gene_universe,
-                    pvalueCutoff = 0.05,
-                    TERM2GENE = annotate_func(dbtype = "wiki", species = "mouse") %>% dplyr::select(wpid, gene),
-                    TERM2NAME = annotate_func(dbtype = "wiki", species = "mouse") %>% dplyr::select(wpid, name)
-                )
-
-                wiki_enrichr_result@result %>% dplyr::mutate(p_log = -1 * log(pvalue, 10)) %>%
-                    dplyr::filter(p_log > 1.3) -> plot_ora_wiki
-                plot_ora_wiki %>% mutate(clust_id = x)
-            })
-            return(wiki_ora_result)
-        }
-}
-
-
-no_of_grps <-
-    analysis_data %>% dplyr::select(starts_with("clust_")) %>% unique() %>% .[!is.na(.)]
-
-
-
-
-gene_universe <- object %>% .[, c("ENTREZID")] %>% as.character()
-
-
-if (db == "kegg")
-{
-    kk_ora_result <- no_of_grps %>% lapply(., function(x)
-    {
-        gene_oi <-
-            analysis_data %>% dplyr::filter(cluster_id == x & ENTREZID != "")
-        # second option - below code creates a vector of differnt column names that hold cluster ids.
-        # alternate option - is to create  a vector with different cluster_id_names
-
-        # colnames(analysis_data) -> colnames_storage
-        # colnames_storage[grepl("clust_", colnames_storage)] -> col_name_to_loop
-
-        # gene_oi = NULL
-        # for (i in cluster_ids) {
-        #   gene_oi <- analysis_data %>% dplyr::filter(i == x)
-        # }
-
-        kegg_enrichr_result <-
-            enrichKEGG(
-                gene = gene_oi$ENTREZID ,
-                universe = gene_universe,
-                organism = "mmu",
-                pvalueCutoff = 0.05
-            )
-        kegg_enrichr_result@result %>% dplyr::mutate(p_log = -1 * log(pvalue, 10)) %>%
-            dplyr::filter(p_log > 1.3) -> plot_ora_kegg
-        plot_ora_kegg %>% mutate(clust_id = x)
-
-    })
-    return(kk_ora_result)
-}
-
-# -----------------------------------------------------------------------------------
-if (dbtype == "wiki_enrich")
-{
-    wiki_ora_result <- no_of_grps %>% lapply(., function(x)
-    {
-        gene_oi <-
-            analysis_data %>% dplyr::filter(cluster_id == x & ENTREZID != "")
-        # subset_gene_clusts <- subset(analysis_data, select = grep("clust_", names(analysis_data)))
-        # gene_oi <- analysis_data %>% dplyr::filter(subset_gene_clusts == x)
-        wiki_enrichr_result <- enricher(
-            gene = gene_oi$ENTREZID,
-            universe = gene_universe,
-            pvalueCutoff = 0.05,
-            TERM2GENE = annotate_func(dbtype = "wiki", species = "mouse") %>% dplyr::select(wpid, gene),
-            TERM2NAME = annotate_func(dbtype = "wiki", species = "mouse") %>% dplyr::select(wpid, name)
-        )
-
-        wiki_enrichr_result@result %>% dplyr::mutate(p_log = -1 * log(pvalue, 10)) %>%
-            dplyr::filter(p_log > 1.3) -> plot_ora_wiki
-        plot_ora_wiki %>% mutate(clust_id = x)
-    })
-    return(wiki_ora_result)
-}
-# -----------------------------------------------------------------------------------
-if (dbtype == "go_enrich")
-{
-    go_ora_result <- no_of_grps %>% lapply(., function(x)
-    {
-        gene_oi <-
-            analysis_data %>% dplyr::filter(cluster_id == x & ENTREZID != "")
-        print(gene_oi)
-        go_enrichr_result <- enrichGO(
-            gene = gene_oi$ENTREZID,
-            universe = gene_universe,
-            OrgDb = org.Mm.eg.db,
-            ont = "CC",
-            pvalueCutoff = 0.05,
-            pAdjustMethod = "BH",
-            qvalueCutoff = 0.05,
-            readable = TRUE
-        )
-        go_enrichr_result@result %>% dplyr::mutate(p_log = -1 * log(pvalue, 10)) %>%
-            dplyr::filter(p_log > 1.0) -> plot_ora_go
-        plot_ora_go %>% mutate(clust_id = x)
+        names(dbres_list) <- cluster_type
+        dbres_list
 
     })
 
-    return(go_ora_result)
-}
+    names(ora_list) <- contrastdefs
+
+    object@metadata[[length(object@metadata) + 1]] <- ora_list
+    names(object@metadata)[length(names(object@metadata))] <- paste0("ora_", db)
+
+    return(object)
+
 }
