@@ -7,7 +7,7 @@
 #' @export
 #' @import magrittr
 #'
-#' @examples
+#' @examples trim_outlier(sample(1:100, 30, replace=TRUE))
 trim_outlier <- function (object, n_sigma = 3.5) {
 
     exprs(object) %<>% apply(., 1, function (x) {

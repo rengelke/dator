@@ -9,7 +9,7 @@
 #' @import magrittr
 #' @importFrom stringr str_split
 #'
-#' @examples
+#' @examples tidy_keys(c("68195; 100037283" "224903", "NaN", NA, "14660", "", "67532, 100034361"))
 tidy_keys <- function (x) {
 
     x %>%
@@ -22,3 +22,4 @@ tidy_keys <- function (x) {
 
 
 }
+
