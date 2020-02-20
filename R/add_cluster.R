@@ -50,24 +50,34 @@ add_cluster <- function (object,
 
         if ("pval" %in% cluster_type) {
             clusterdefs %<>%
-                dplyr::mutate(clust_pval =  ifelse(p <= sig_level & effect <= 0, 1,
-                                                   ifelse(p <= sig_level & effect >= 0, 2,
-                                                          3)))
+                dplyr::mutate(clust_pval = ifelse(p <= sig_level & effect <= 0, 1,
+                                                  ifelse(p <= sig_level & effect >= 0, 2,
+                                                         NA)),
+                              clust_label = ifelse(clust_pval == 1, "downregulated",
+                                                   ifelse(clust_pval == 2, "upregulated", NA)))
 
         }
 
         if ("pval_bins" %in% cluster_type) {
 
+            breaks_mod <- sort(c(breaks %>% log(10), -1*breaks %>% log(10), -Inf, Inf))
+            breaks_lab <- paste0(c(0, breaks, rev(breaks), Inf), ",",
+                                 c(-Inf, breaks, rev(breaks), 0)[-1])[1:length(breaks_mod)-1]
+            breaks_lab <- paste0("[", breaks_lab, "]")
+
             clusterdefs %<>%
-                dplyr::mutate(clust_pbins = ifelse(p <= 0.05 & effect <= 0, 1,
-                                                   ifelse(p <= 0.10 & p > 0.05 & effect <= 0, 2,
-                                                          ifelse(p <= 0.20 & p > 0.10 & effect <= 0, 3,
-                                                                 ifelse(p <= 1 & p > 0.20, 4,
-                                                                        ifelse(p <= 0.20 & p > 0.10 & effect >= 0, 5,
-                                                                               ifelse(p <= 0.10 & p > 0.05 & effect >= 0, 6,
-                                                                                      ifelse(p <= 0.05 & effect >= 0, 7,
-                                                                                             NA))))))))
+                dplyr::mutate(effect_dir = effect/abs(effect)) %>%
+                dplyr::mutate(p_dir = -1*log(p,10) * effect_dir) %>%
+                dplyr::mutate(clust_pval_bins = cut(p_dir, breaks = breaks_mod,
+                                                    include.lowest = TRUE,
+                                                    labels = FALSE),
+                              clust_labels = cut(p_dir, breaks = breaks_mod,
+                                                 include.lowest = TRUE,
+                                                 labels = breaks_lab)) %>%
+                dplyr::select(-effect_dir, -p_dir)
+
         }
+
 
         if ("bins" %in% cluster_type) {
 
@@ -76,6 +86,10 @@ add_cluster <- function (object,
                 dplyr::mutate(clust_bins = cut(effect_tmp,
                                                quantile(effect_tmp, (0:k)/k, na.rm = TRUE),
                                                include.lowest = TRUE, labels = FALSE)) %>%
+                dplyr::mutate(clust_labels = cut(effect_tmp,
+                                               quantile(effect_tmp, (0:k)/k, na.rm = TRUE) %>%
+                                                   round(2),
+                                               include.lowest = TRUE)) %>%
                 dplyr::select(-effect_tmp)
         }
 
