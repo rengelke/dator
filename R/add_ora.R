@@ -94,13 +94,13 @@ add_ora <- function(object,
 
             no_of_groups <- tmp_fdata$clust_id %>%
                 unique() %>% .[!is.na(.)] %>%
-                order(decreasing = TRUE)
+                sort()
 
 
 
             if (any(db %in% "wiki")) {
 
-                ora_wiki <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -118,14 +118,14 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_wiki %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
 
             if (any(db %in% "kegg")) {
 
-                ora_kegg <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -141,14 +141,14 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_kegg %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
 
             if (any(db %in% "go")) {
 
-                ora_go <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -165,13 +165,13 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_go %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
             if (any(db %in% "msigH")) {
 
-                ora_msigH <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -187,13 +187,13 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_msigH %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
             if (any(db %in% "msigC2")) {
 
-                ora_msigC2 <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -209,14 +209,14 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_msigC2 %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
 
             if (any(db %in% "msigC5")) {
 
-                ora_msigC5 <- no_of_groups %>% lapply(function (z) {
+                ora_result <- no_of_groups %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
@@ -232,13 +232,14 @@ add_ora <- function(object,
                                       !!cluster_col := z)
 
                 })
-                ora_msigC5 %<>% do.call(rbind, .)
+                ora_result %<>% do.call(rbind, .)
 
             }
 
-            mget(ls(pattern = "ora_"))
+            ora_result
 
-        })
+            })
+
 
         names(dbres_list) <- cluster_type
         dbres_list
