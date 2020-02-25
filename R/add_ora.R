@@ -6,8 +6,8 @@
 #' @param cluster_type type of cluster to generate: "pval", "pbins", "bins"
 #' @param contrasts contrasts, as defined in clustedefs of SummarizedExperiment object
 #' @param sig_level p-value cutoff for significance cluster "pval"
-#' @param p_cutoff p-value cutoff for over-representation analysis
-#' @param q_cutoff q-value cutoff for over-representation analysis
+#' @param p_cutoff p-value cutoff for over-representation analysis results
+#' @param q_cutoff q-value cutoff for over-representation analysis results
 #' @param simplify_go simplify GO enrichment analysis results
 #' @param k number of bins for bin cluster "bins"
 #' @param custom_db custom database; data frame containing "id", "gene" and "name" columns
@@ -29,6 +29,7 @@ add_ora <- function(object,
                     p_cutoff = 0.05,
                     q_cutoff = 0.2,
                     simplify_go = FALSE,
+                    breaks = c(0.05, 0.1, 0.2),
                     k = 5,
                     custom_db = NULL,
                     ...) {
@@ -47,7 +48,7 @@ add_ora <- function(object,
         contrasts <- names(object@metadata$contrastdefs)
     }
 
-    organism <- autonomics.annotate::infer_organism(fdata(object)$feature_id[1:3],
+    organism <- autonomics.annotate::infer_organism(fdata(object)$feature_uniprot[1:3],
                                                     "uniprot")
     if (organism == "Homo sapiens") {
         organism_shrt <- "hsa"
@@ -72,6 +73,7 @@ add_ora <- function(object,
                           cluster_type = cluster_type,
                           contrasts = contrasts,
                           sig_level = sig_level,
+                          breaks = breaks,
                           k = k)
 
     if (!all(contrasts == (attr(object@metadata$clusterdefs, which = "names")))) {
