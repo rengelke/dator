@@ -1,21 +1,21 @@
 
 
-# file <- "C:/Users/rue2006/Documents/R_wd/mazloum_mouse/data/20200203_WCQO-20-001B/20200203_WCQO-20-001B.csv"
-# object <- read_olink(file)
-#
-# filter_sample_type = c("Sample")
-# filter_feature_type = c("Protein")
-# filter_sample_quality = c("Warning", "Pass")
-# filter_feature_quality = 1.0
-# rm_features_below_lod_for_some_sample = TRUE
-#
-# rm_complete_feature_nondetects = TRUE
-# rm_complete_sample_nondetects = TRUE
-# rm_single_value_svars = FALSE
-# rm_single_value_fvars = FALSE
-# rm_na_svars = TRUE
-# rm_na_fvars = TRUE
-# log10transform = FALSE
+file <- "C:/Users/rue2006/Documents/R_wd/mazloum_mouse/data/20200203_WCQO-20-001B/20200203_WCQO-20-001B.csv"
+object <- read_olink(file)
+
+filter_sample_type = c("Sample")
+filter_feature_type = c("Protein")
+filter_sample_quality = c("Warning", "Pass")
+filter_feature_quality = 1.0
+rm_features_below_lod_for_some_sample = TRUE
+
+rm_complete_feature_nondetects = TRUE
+rm_complete_sample_nondetects = TRUE
+rm_single_value_svars = FALSE
+rm_single_value_fvars = FALSE
+rm_na_svars = TRUE
+rm_na_fvars = TRUE
+log10transform = FALSE
 
 
 #' Prepare Olink
@@ -102,7 +102,7 @@ prepare_olink <- function (object,
     }
 
     if (rm_features_below_lod_for_some_sample) {
-        exprs(object) %<>% sweep(., 2, fdata(object)$LOD, `-`) %>%
+        exprs(object) %>% sweep(., 2, fdata(object)$LOD, `-`, check.margin = FALSE) %>%
             replace(. <= 0, NA)
     }
 
