@@ -13,9 +13,6 @@
 # rm_complete_sample_nondetects = TRUE
 # rm_single_value_svars = FALSE
 # rm_single_value_fvars = FALSE
-# rm_na_svars = TRUE
-# rm_na_fvars = TRUE
-# log10transform = FALSE
 
 
 #' Prepare Olink
@@ -102,7 +99,7 @@ prepare_olink <- function (object,
     }
 
     if (rm_features_below_lod_for_some_sample) {
-        exprs(object) %>% sweep(., 2, fdata(object)$LOD, `-`, check.margin = FALSE) %>%
+        exprs(object) %<>% sweep(., 2, fdata(object)$LOD, `-`, check.margin = FALSE) %>%
             replace(. <= 0, NA)
     }
 
