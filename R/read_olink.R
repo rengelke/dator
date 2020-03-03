@@ -23,8 +23,7 @@ read_olink <- function (file) {
 
     # Assert
     assertive.files::assert_all_are_existing_files(file)
-    assertive.types::assert_is_a_string(fid_var)
-    assertive.types::assert_is_a_string(fname_var)
+
 
     fid_var <- "OlinkID"
     fname_var <- "Assay"

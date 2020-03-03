@@ -3,11 +3,11 @@
 # file <- "C:/Users/rue2006/Documents/R_wd/mazloum_mouse/data/20200203_WCQO-20-001B/20200203_WCQO-20-001B.csv"
 # object <- read_olink(file)
 #
-# filter_sample_type = c("Control", "Sample")
-# filter_feature_type = c("Control", "Protein")
+# filter_sample_type = c("Sample")
+# filter_feature_type = c("Protein")
 # filter_sample_quality = c("Warning", "Pass")
 # filter_feature_quality = 1.0
-# rm_features_below_LOD = TRUE
+# rm_features_below_lod_for_some_sample = TRUE
 #
 # rm_complete_feature_nondetects = TRUE
 # rm_complete_sample_nondetects = TRUE
@@ -32,7 +32,8 @@
 #' @param rm_single_value_fvars logical:  whether to remove single value fvars
 #'
 #' @return
-#' @export SummarizedExperiment
+#' @importFrom magrittr %>% %<>%
+#' @export
 #'
 #' @examples prepare_olink(object)
 prepare_olink <- function (object,
@@ -47,9 +48,10 @@ prepare_olink <- function (object,
                            rm_single_value_fvars = FALSE) {
 
 
-    assertive.types::assert_is_character(c(filter_sample_type,
-                                           filter_sample_quality, filter_feature_type))
-    filter_feature_quality %>% assertive.types::assert_is_a_number() %>%
+    c(filter_sample_type, filter_sample_quality, filter_feature_type) %>%
+        assertive.types::assert_is_character()
+    filter_feature_quality %>%
+        assertive.types::assert_is_a_number() %>%
         assertive.numbers::assert_all_are_greater_than(0) %>%
         assertive.numbers::assert_all_are_less_than_or_equal_to(1)
     assertive.types::assert_is_logical(c(rm_features_below_lod_for_some_sample,
@@ -79,7 +81,7 @@ prepare_olink <- function (object,
     if ("Assay" %in% autonomics.import::fvars(object)) {
         autonomics.import::fdata(object)$feature_type <- ifelse(
             autonomics.import::fdata(object)$Assay %>%
-                stringr::str_detect("^Inc Ctrl |^Det Ctrl |^Ext Ctrl "),
+                stringr::str_detect("^Inc Ctrl|^Det Ctrl|^Ext Ctrl"),
             "Control", "Protein")
         idx <- fdata(object)$feature_type %in% filter_feature_type
         idx <- idx & !is.na(idx)
