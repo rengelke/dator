@@ -22,7 +22,7 @@
 #' @param filter_feature_type string vector: feature types to be filtered for. Subset of c('Protein', 'Control')
 #' @param filter_sample_quality string vector: sample  qualities to be filtered for. Subset of c('Pass', 'Warning')
 #' @param filter_feature_quality number: fraction 0-1 indicating missing data frequency cutoff
-#' @param rm_features_below_lod_for_some_sample logical: wether to remove values below limit of detection (LOD)
+#' @param rm_features_below_lod_for_some_sample logical: wether to remove values below limit of detection (LOD); if FALSE values below LOD are filled with 0.5*LOD
 #' @param rm_complete_feature_nondetects logical: wether to remove complete feature nondetects
 #' @param rm_complete_sample_nondetects logical: wether to remove complete sample nondetects
 #' @param rm_single_value_svars logical:  whether to remove single value svars
@@ -98,9 +98,19 @@ prepare_olink <- function (object,
         autonomics.import::fdata(object) %<>% droplevels()
     }
 
+    # remove features below LOD  or fill with 0.5*LOD
     if (rm_features_below_lod_for_some_sample) {
-        exprs(object) %<>% sweep(., 2, fdata(object)$LOD, `-`, check.margin = FALSE) %>%
-            replace(. <= 0, NA)
+        exprs(object) %<>% apply(., 2, function (x) {
+            idx <- (x <= fdata(object)$LOD)
+            x[idx] <- NA
+            x
+        })
+    } else {
+        exprs(object) %<>% apply(., 2, function (x) {
+            idx <- (x <= fdata(object)$LOD)
+            x[idx] <- 0.5*fdata(object)$LOD[idx]
+            x
+        })
     }
 
     if (rm_complete_feature_nondetects) {
