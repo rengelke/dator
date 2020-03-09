@@ -1,4 +1,4 @@
-#
+
 # library(magrittr)
 # library(autonomics)
 # library(ggplot2)
@@ -6,12 +6,24 @@
 #
 # object <- dator:::data_sirt
 #
+#
 # object %<>% dator::add_ora(db = "wiki")
 # object %<>% dator::add_ora(db = "kegg")
 #
-#
-#
-#
+# object %<>% add_ora(.,
+#                   db = "kegg",
+#                   cluster_type = "pbins",
+#                   contrasts = NULL,
+#                   sig_level = 0.05,
+#                   p_cutoff = 0.05,
+#                   q_cutoff = 0.2,
+#                   simplify_go = TRUE,
+#                   breaks = c(0.01, 0.05, 0.1, 0.2, 0.5),
+#                   # breaks = c(0.05),
+#                   k = 3,
+#                   custom_db = NULL)
+
+
 #' Plot over-representation analysis results
 #'
 #' @param object SummarizedExperiment object
@@ -27,7 +39,7 @@
 #' @return Plot of over-representation analysis results
 #' @export
 #'
-#' @import magrittr
+#' @importFrom magrittr %>% %<>%
 #' @import dplyr
 #' @import ggplot2
 #' @import autonomics
@@ -41,7 +53,7 @@ plot_ora <- function(object,
                      exclude = NULL,
                      sig_level = 0.05,
                      p_cutoff = 0.05,
-                     q_cutoff = 0.2) {
+                     q_cutoff = 0.5) {
 
 
     assertive.types::assert_is_any_of(object, classes = c("SummarizedExperiment"))
@@ -58,8 +70,8 @@ plot_ora <- function(object,
                                         "heatmap", "heatplot"), several.ok = FALSE)
 
     cluster_type <- match.arg(cluster_type, c("pval", "pbins", "bins"), several.ok = FALSE)
-    db <- match.arg(db, c("wiki", "kegg", "go",
-                          "msigH", "msigC2", "msigC5"), several.ok = FALSE)
+    db <- match.arg(db, c("wiki", "kegg", "go_bp", "go_mf", "go_cc",
+                          "msigH", "msigC2", "msigC5", "custom"), several.ok = FALSE)
 
     if (is.null(contrasts)) {
         contrasts <- names(object@metadata$contrastdefs)[1]
@@ -99,12 +111,15 @@ plot_ora <- function(object,
     if (plot_type == "barplot") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
-            dplyr::group_by(Description) %>%
-            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff | qvalue <= q_cutoff)) %>%
-            dplyr::filter(seen_one) %>%
-            dplyr::ungroup() %>%
             dplyr::arrange(pvalue) %>%
-            dplyr::arrange_at(vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::group_by(Description) %>%
+            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
+            dplyr::filter(seen_one) %>%
+            dplyr::ungroup()
+        if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        tmp %<>%
+            dplyr::arrange(pvalue) %>%
+            dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
             dplyr::mutate(Description = Description %>%
                               factor(., levels = rev(unique(.))))
 
@@ -132,12 +147,15 @@ plot_ora <- function(object,
     if (plot_type == "dotplot1") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
-            dplyr::group_by(Description) %>%
-            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff | qvalue <= q_cutoff)) %>%
-            dplyr::filter(seen_one) %>%
-            dplyr::ungroup() %>%
             dplyr::arrange(pvalue) %>%
-            dplyr::arrange_at(vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::group_by(Description) %>%
+            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
+            dplyr::filter(seen_one) %>%
+            dplyr::ungroup()
+        if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        tmp %<>%
+            dplyr::arrange(pvalue) %>%
+            dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
             dplyr::mutate(Description = Description %>%
                               factor(., levels = rev(unique(.)))) %>%
             dplyr::mutate(gene_ratio = GeneRatio %>%
@@ -163,15 +181,18 @@ plot_ora <- function(object,
     if (plot_type == "dotplot2") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
+            dplyr::arrange(pvalue) %>%
             dplyr::group_by(Description) %>%
-            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff | qvalue <= q_cutoff)) %>%
+            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
             dplyr::filter(seen_one) %>%
-            dplyr::ungroup() %>%
+            dplyr::ungroup()
+        if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        tmp %<>%
             dplyr::mutate(gene_ratio = GeneRatio %>%
                               sapply(., function (x) eval(parse(text=x)))) %>%
             dplyr::mutate(logp = ifelse(logp >= 10, 10, logp)) %>%
             dplyr::arrange(dplyr::desc(gene_ratio)) %>%
-            dplyr::arrange_at(vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
             dplyr::mutate(Description = Description %>%
                               factor(., levels = rev(unique(.))))
 
@@ -194,10 +215,13 @@ plot_ora <- function(object,
         if (plot_type == "heatmap") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
+            dplyr::arrange(pvalue) %>%
             dplyr::group_by(Description) %>%
-            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff | qvalue <= q_cutoff)) %>%
+            dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
             dplyr::filter(seen_one) %>%
-            dplyr::ungroup() %>%
+            dplyr::ungroup()
+        if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        tmp %<>%
             dplyr::select("Description", "logp", cluster_col[1]) %>%
             dplyr::mutate(logp = ifelse(logp >= 10, 10, logp)) %>%
             reshape2::dcast(as.formula(paste("Description", cluster_col[1], sep="~")),
