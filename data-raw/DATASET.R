@@ -30,6 +30,12 @@ msigdb_C2_mouse <- msigdbr::msigdbr(species = "Mus musculus", category = "C2")
 msigdb_C5_mouse <- msigdbr::msigdbr(species = "Mus musculus", category = "C5")
 
 
+# UniProt -----------------------------------------------------------------
+
+uniprot_human <- UniProt.ws::UniProt.ws(taxId = 9606)
+uniprot_mouse <- UniProt.ws::UniProt.ws(taxId = 10090)
+
+
 # Color names -------------------------------------------------------------
 
 color_names <- read.csv("~/../Dropbox/color_names.csv", stringsAsFactors = FALSE)
@@ -40,6 +46,7 @@ color_names <- read.csv("~/../Dropbox/color_names.csv", stringsAsFactors = FALSE
 # Data sets ---------------------------------------------------------------
 
 data_sirt <- readRDS("~/R_wd/dator/data-raw/data_sirt.rds")
+data_dp <- readRDS("~/R_wd/dator/data-raw/data_dp.rds")
 
 
 # SAVE to R/sysdata.rda ---------------------------------------------------
@@ -54,6 +61,11 @@ usethis::use_data(wiki_human,
                   msigdb_H_mouse,
                   msigdb_C2_mouse,
                   msigdb_C5_mouse,
+                  uniprot_human,
+                  uniprot_mouse,
                   color_names,
                   data_sirt,
-                  internal = TRUE, overwrite = TRUE)
+                  data_dp,
+                  internal = TRUE,
+                  overwrite = TRUE)
+
