@@ -22,12 +22,12 @@
 #'
 #' @examples add_ora(object, db = "wiki")
 add_ora <- function(object,
-                    db = c("wiki", "kegg", "go_bp", "go_mf", "go_cc", "msigH", "msigC2", "msigC5"),
+                    db = c("wiki", "kegg", "go_bp", "go_mf", "go_cc", "msigH", "msigC2", "msigC5", "custom"),
                     cluster_type = c("pval", "pbins", "bins"),
                     contrasts = NULL,
                     sig_level = 0.05,
                     p_cutoff = 0.05,
-                    q_cutoff = 0.2,
+                    q_cutoff = 0.3,
                     simplify_go = FALSE,
                     breaks = c(0.05, 0.1, 0.2),
                     k = 5,
@@ -42,10 +42,17 @@ add_ora <- function(object,
     assertive.types::assert_is_any_of(db, classes = c("NULL", "character"))
     assertive.types::assert_is_any_of(contrasts, classes = c("NULL", "character"))
     db <- match.arg(db, c("wiki", "kegg", "go_bp", "go_mf", "go_cc",
-                          "msigH", "msigC2", "msigC5"), several.ok = FALSE)
+                          "msigH", "msigC2", "msigC5", "custom"), several.ok = FALSE)
 
     if (is.null(contrasts)) {
         contrasts <- names(object@metadata$contrastdefs)
+    }
+    if (db == "custom") {
+        if (is.null(custom_db)) {
+            stop("Error: `custom` db parameter requires custom database containing term and gene columns.")
+        } else {
+            custom_db %<>% `colnames<-`(c("term", "gene"))
+        }
     }
 
     organism <- autonomics.annotate::infer_organism(fdata(object)$feature_uniprot[1:3],
@@ -309,9 +316,9 @@ add_ora <- function(object,
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
                                               TERM2GENE = custom_db %>%
-                                                  dplyr::select(id, gene),
-                                              TERM2NAME = custom_db %>%
-                                                  dplyr::select(id, name),
+                                                  dplyr::select(term, gene),
+                                              # TERM2NAME = custom_db %>%
+                                              #     dplyr::select(term, name),
                                               pvalueCutoff = p_cutoff,
                                               qvalueCutoff = q_cutoff)@result %>%
                         dplyr::mutate(logp = -1*log(pvalue, 10),
@@ -334,9 +341,15 @@ add_ora <- function(object,
 
     names(ora_list) <- contrasts
 
-    object@metadata[[length(object@metadata) + 1]] <- ora_list
-    names(object@metadata)[length(names(object@metadata))] <- paste0("ora_", db)
+    ora_name <- paste0("ora_", db)
+
+    if (ora_name %in% names(object@metadata)) {
+        object@metadata[[ora_name]] <- ora_list
+    } else {
+        object@metadata[[length(object@metadata) + 1]] <- ora_list
+        names(object@metadata)[length(names(object@metadata))] <- ora_name
+    }
 
     return(object)
-
 }
+
