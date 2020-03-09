@@ -10,7 +10,7 @@
 #' @return updated SummarizedExperiment object
 #' @export
 #'
-#' @import magrittr
+#' @importFrom magrittr %<>% %>%
 #' @import dplyr
 #' @import autonomics
 #'
@@ -24,10 +24,14 @@ add_cluster <- function (object,
 
 
     assertive.types::assert_is_any_of(object, classes = c("SummarizedExperiment"))
-    if (assertthat::has_name(object@metadata, c("contrastdefs", "limma")) == FALSE) {
+    if (!assertthat::has_name(object@metadata, c("contrastdefs", "limma")) |
+        !assertive.properties::is_not_null(rownames(autonomics.import::limma(object)))) {
         stop("Object metadata does not contain limma results")
     }
-
+    if (!assertive.base::are_identical(autonomics.import::fnames(object),
+                                       rownames(autonomics.import::limma(object)))) {
+        stop("Feature names of object and limma results are not identical")
+    }
     assertive.types::assert_is_any_of(cluster_type, classes = c("NULL", "character"))
     assertive.types::assert_is_any_of(contrasts, classes = c("NULL", "character"))
     sig_level %>% assertive.types::assert_is_a_number() %>%
@@ -111,7 +115,8 @@ add_cluster <- function (object,
     }
 
 
-    S4Vectors::metadata(object)$clusterdefs <- array(clusterdefs_list, dim = c(3)) %>%
+    S4Vectors::metadata(object)$clusterdefs <- array(clusterdefs_list,
+                                                     dim = length(clusterdefs_list)) %>%
         'names<-'(contrasts)
     object
 
