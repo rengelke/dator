@@ -1,0 +1,277 @@
+---
+title: "graphics"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+https://www.data-to-viz.com/
+
+https://www.r-graph-gallery.com/
+
+
+
+
+https://wilkelab.org/ungeviz/articles/misc-geoms-stats.html
+
+https://serialmentor.com/dataviz/
+
+
+https://www.data-to-viz.com/
+
+https://www.datanovia.com/en/blog/ggplot-examples-best-reference/
+
+http://www.sthda.com/english/wiki/be-awesome-in-ggplot2-a-practical-guide-to-be-highly-effective-r-software-and-data-visualization
+
+https://cedricscherer.netlify.com/2019/05/17/the-evolution-of-a-ggplot-ep.-1/
+
+https://cedricscherer.netlify.com/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/
+
+
+https://austinwehrwein.com/
+
+
+```{r}
+#, fig.width=1, fig.height=1.6
+data(ToothGrowth)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+
+bp <- ggplot(ToothGrowth, aes(x = dose, y = len)) + 
+  geom_boxplot() +
+  theme_classic()
+
+pal_qual %>% lapply(function (x) {
+  bp + geom_boxplot(aes(color = dose)) +
+  scale_color_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp.pdf", width = 4.0, height = 6.0)
+
+pal_qual %>% lapply(function (x) {
+  bp + geom_boxplot(aes(fill = dose)) +
+  scale_fill_manual(values = x) 
+})  %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp2.pdf", width = 4.0, height = 6.0)
+
+
+```
+
+
+
+
+
+```{r, fig.width=4.5, fig.height=4.9}
+
+data("mtcars")
+mtcars$cyl <- as.factor(mtcars$cyl)
+
+bbp <- mtcars %>%
+  ggplot(aes(x = wt, y = mpg)) + 
+  geom_point(aes(color = cyl, size = qsec), alpha = 0.5) +
+  scale_size(range = c(0.5, 12)) +
+  theme_classic()
+
+pal_qual %>% lapply(function (x) {
+  bbp + 
+  scale_color_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp3.pdf", width = 14, height = 10)
+
+```
+
+
+```{r}
+
+sp <- mtcars %>%
+  ggplot(aes(x = wt, y = mpg)) +
+  theme_classic()
+
+
+pal_qual %>% lapply(function (x) {
+  sp + geom_point(aes(color = cyl), size = 4.5) +
+  scale_color_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+
+pal_seq %>% lapply(function (x) {
+  sp + geom_point(aes(color = mpg), size = 4.5) +
+  scale_color_gradientn(colors = x)
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+
+pal_seqm %>% lapply(function (x) {
+  sp + geom_point(aes(color = mpg), size = 4.5) +
+  scale_color_gradientn(colors = x)
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+
+pal_div %>% lapply(function (x) {
+  sp + geom_point(aes(color = mpg), size = 4.5) +
+  scale_color_gradientn(colors = x)
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+
+```
+
+```{r}
+
+nmmaps <- read.csv("http://zevross.com/blog/wp-content/uploads/2014/08/chicago-nmmaps.csv")
+
+nmmaps$date <- as.Date(nmmaps$date)
+nmmaps <- nmmaps[nmmaps$date > as.Date("1996-12-31"), ]
+nmmaps$year <- substring(nmmaps$date, 1, 4)
+
+sp <- nmmaps %>%
+  ggplot(aes(date, temp, color=factor(season))) +
+  geom_point(size = 1) +
+  theme_classic()
+
+pal_qual %>% lapply(function (x) {
+  sp + 
+  scale_color_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp4.pdf", width = 14, height = 6.7)
+
+
+```
+
+```{r}
+set.seed(1234)
+wdata = data.frame(
+        sex = factor(rep(c("F", "M"), each=200)),
+        weight = c(rnorm(200, 55), rnorm(200, 58)))
+
+qplot(sex, weight, data = wdata, geom = "dotplot",
+      stackdir = "center", binaxis = "y", dotsize = 0.5)
+
+hp <- ggplot(wdata, aes(x = weight)) + 
+  theme_bw()
+
+pal_qual %>% lapply(function (x) {
+  hp + 
+    geom_area(aes(fill = sex), stat ="bin", alpha=0.8) +
+    scale_fill_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp5.pdf", width = 7.8, height = 4.8)
+
+
+pal_qual %>% lapply(function (x) {
+  hp + 
+    geom_density(aes(fill = sex), alpha=0.4) +
+    scale_fill_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE)  
+ggsave("tmp6.pdf", width = 7.8, height = 4.8)
+
+
+```
+
+
+
+
+```{r}
+
+library(ggthemes)
+
+sp <- nmmaps %>%
+  ggplot(aes(date, temp, color=factor(season))) +
+  geom_point(size = 1) +
+  theme_classic()
+
+sp + theme_few()
+sp + theme_base()
+sp + theme_calc()
+sp + theme_clean()
+
+sp + scale_color_colorblind()
+sp + scale_color_calc()
+sp + scale_color_tableau()
+sp + scale_color_manual(values = pal_qual[[6]]) 
+sp + scale_color_economist()
+sp + scale_color_excel_new()
+sp + scale_color_few()
+sp + scale_color_gdocs()
+sp + scale_color_pander()
+sp + scale_color_ptol()
+sp + scale_color_solarized()
+sp + scale_color_stata()
+sp + scale_color_wsj()
+
+sp <- nmmaps %>%
+  ggplot(aes(date, temp, color=factor(season), shape=factor(season))) +
+  geom_point(size = 2) +
+  theme_classic()
+
+sp + scale_shape_calc() 
+sp + scale_shape_circlefill() 
+sp + scale_shape_cleveland() 
+sp + scale_shape_few() 
+sp + scale_shape_stata() 
+sp + scale_shape_tableau() + scale_color_manual(values = pal_qual[[2]]) 
+sp + scale_shape_tremmel()
+
+
+```
+
+
+
+
+```{r}
+
+housing <- read.csv("http://www.science.smith.edu/~jcrouser/SDS192/landdata-states.csv")
+
+hp <- housing %>% ggplot(aes(y = State, x = Home.Price.Index)) + 
+  geom_point(aes(color = Date), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = position_jitter(width = 0, height = 0.25)) +
+  theme_bw()
+
+hp + scale_color_continuous(breaks = c(1975.25, 1994.25, 2013.25),
+                         labels = c(1971, 1994, 2013))
+
+hp + scale_color_gradientn(breaks = c(1975.25, 1994.25, 2013.25),
+                           labels = c(1971, 1994, 2013),
+                           colors = pal_seqm[[3]])
+```
+
+
+```{r}
+
+pcos <- readRDS("data_pcos.rds")
+
+colorscale <- scale_fill_gradientn(
+    colors = rev(RColorBrewer::brewer.pal(9, "YlGnBu")),
+    values = c(0, exp(seq(-5, 0, length.out = 100))))
+
+autonomics::fdata(pcos) %>% 
+    ggplot(aes(x = pca1, y = pca2)) + 
+    stat_density2d(h = 0.01, bins = 100,
+          aes( fill = ..level..), geom = "polygon") +
+    colorscale + 
+  coord_fixed() +
+    theme_bw()
+
+autonomics::fdata(pcos) %>% 
+    ggplot(aes(x = pca1, y = pca2)) + 
+geom_hex(binwidth = c(0.0075, 0.0075)) + colorscale +
+  coord_fixed() +
+    theme_bw()
+
+```
+
+
+
+

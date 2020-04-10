@@ -1,0 +1,442 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(magrittr)
+library(ggplot2)
+library(colorspace)
+library(unikn)
+
+pal_qual <- list()
+pal_div <- list()
+pal_seq <- list()
+pal_seqm <- list()
+
+```
+
+
+## Journal theme colors
+
+1. Selected 2-3 main theme colors: jpr_theme, acs_theme
+2. Selected extended color palette from HP and sorted in IWantHue by diff
+
+
+```{r}
+
+list(
+    c("#B31B1B", "#CF4520", "#E87722", "#FFC72C"),
+    c("#555555", "#777777", "#dddddd", "#f7f7f7")
+
+) %>% 
+  { . ->> theme_colors} %>%
+  print() %>%
+  seecol(title = "WCM theme colors")
+
+theme_colors %>% lapply(function (x) {
+  colorspace::hex2RGB(x) %>%
+    as(., "polarLUV") %>% .@coords %>%
+    round(0)
+})
+
+```
+
+## Create a custom palette
+
+```{r, eval=FALSE}
+
+colorspace::choose_color()
+
+```
+
+The main theme color #B31B1B is 'cornell red' (HCL 12 115 39).
+
+
+Which colors fits to 'cornell red'?
+
+![Martian Color Wheel](http://warrenmars.com/visual_art/theory/colour_wheel/martian_colour_wheel_24_hue_f.png)
+
+
+```{r}
+
+colortools::wheel("#B31B1B")
+
+colortools::wheel("#E87722")
+
+```
+
+
+
+### Qualitative n=2 palette
+
+#### Select colors computationally
+
+
+For the publication we would need two colors to distinguish between untreated and deplted plasma.
+
+Split complementary: (a) sea green + broccoli, (b) cobalt blue + emerald  >> not distinguishable
+
+
+
+```{r}
+
+# generate n=2 palettes with hcl wizzard: from H=256, C=72
+a1 = 45
+h1 = 360 + (12-180) + a1
+h2 = 360 + (12-180) - a1
+c1 = 80
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+```
+
+Triadic: (a) blue + green grass   >> not distinguishable
+
+```{r}
+
+a1 = 120
+h1 = 12 + a1
+h2 = 360 + (12 - a1)
+c1 = 80
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+```
+
+
+
+Which colors fits to 'cornell orange'?
+
+
+Try orange #E87722  H 30, C 107, L 62
+
+
+```{r}
+
+a1 = 180
+h1 = 30
+h2 = 30 + a1
+c1 = 80
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+```
+
+
+
+
+##### Strategy 2
+
+This is a similar approach as using Colorpicker for color selection in the H-C pane.
+Select colors selecting the highest chroma available for specific H/L combinations:
+Fixed H, highest C, ramp L
+
+
+COMPLEMENTARY
+
+```{r}
+
+(a1 = 180)
+(h1 = 30)
+(h2 = 30 + a1)
+(c1 = 140)
+
+print("Computed using custom function:")
+
+l_seq <- c(77, 74, 70, 67, 63, 60, 56, 53)
+
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+
+
+```
+
+PYRAMID
+
+
+```{r}
+
+# complementary     H+180
+# split_compl_30    H+180 +/-30
+# split_compl_45    H+180 +/-45
+# tetradic          H+180+60 / H+60
+# tetradic_rev      H+180-60 / H-60
+# triadic           H +/- 120
+# square            H +90/+180/+210
+
+list(
+    complementary   = c("#E87721", "#01A5B8"),
+    split_compl_30  = c('#E87721', '#05A89C', '#0F9FE4'),
+    split_compl_45  = c('#E87721', '#07AA84', '#5694FF'),
+    tetradic        = c("#E87721", "#01A5B8", "#FFFFFF", '#959D09', '#9785FF'),
+    tetradic_rev    = c("#E87721", "#01A5B8", "#FFFFFF", '#00A897', '#F76389'),
+    triadic         = c('#9785FF', "#E87721", '#02AB75'),
+    square          = c('#E87721', '#51AA04', '#01A5B8', '#DB64EE'),
+    pentagon        = c('#E87721', '#82A10D', '#03A996', '#089CF5', '#F157D8'),
+    hexagon         = c('#E87721', '#959D09', '#02AB75', '#01A5B8', '#9785FF', '#F459C3')
+    
+) %>% seecol()
+
+list(
+    random1         = c('#E87721', '#079DEF', '#00AB7B', '#F16C69', '#A39904'),
+    random2         = c('#E87721', '#9A83FE', '#92969F', '#0BA3C5', '#EF6A82'),
+    random3         = c('#E87721', '#039FE2', '#B49305', '#06A4BD', '#77A40E'),
+    random4         = c('#E87721', '#089CF5', '#ED7058', '#04AB76', '#D269F5'),
+    random5         = c('#E87721', '#10A3C4', '#C48C00', '#F85AB4', '#F46969'),
+    random6         = c('#E87721', '#0FAA83', '#868AFF'),
+    random7         = c('#E87721', '#0CA2CC', '#5DA803', '#EE6D74')
+    
+) %>% seecol()
+
+list(
+    div_blue_red = c('#2c81c5', '#5b95ce', '#7faad7', '#a1bfdf', '#c3d4e6', '#e9e9e9', '#ebc9c1', '#e7aa9b', '#e08b75', '#d66c51', '#c94a2e'),
+    sequential1  = c('#e46842', '#db5c5a', '#cd5370', '#b94f83', '#9d5387', '#805487', '#635483', '#45537c')
+) %>% seecol()
+
+```
+
+
+
+Select hue where a large distance is expected in HCL space. This is 195 and 32 for green and orange as estimated using colorpicker
+
+```{r}
+
+c1 = 140
+(h1 = 32)
+(h2 = 195)
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+
+```
+
+
+
+
+
+
+#### Palettes using colorspace::qualitative_hcl
+
+
+
+```{r}
+
+# # select HCL values here:
+# colorspace::choose_color()
+
+(col_vector_1 <- theme_colors[[1]])
+
+(col_coord_1 <- colorspace::hex2RGB(col_vector_1) %>%
+  as(., "polarLUV") %>% .@coords) %>% round(0)
+
+# Main theme blue/yellow/green colors are very different  in L space. 
+# Blue gives a dark palette, yellow very bright 
+
+h1     = 256 
+h_last = -10
+c1     =  72
+l1     =  36
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>% 
+  seecol()
+
+h1     =  53 
+h_last = 360
+c1     =  89
+l1     =  76
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>% 
+  seecol()
+
+# Colors 2,3,5 in palette 5 are in same L range and can be used 
+h1     =  26 
+h_last =-278
+c1     = 100
+l1     =  57
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>%
+  seecol()
+
+
+```
+
+
+
+"#cf4520",
+"#2c81c5"
+
+
+```{r}
+
+h1 = 256
+h2 = 256+120-360  # tetradic complementary red 
+c1 = 88
+l1 = 37
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, 90), power = 1.0) %>% seecol()
+
+```
+
+
+
+```{r, eval=FALSE}
+
+colorspace::choose_palette()
+
+```
+
+```{r}
+
+# Theme blue can be used for heatmap
+# matching red from IWH: #982F36  HCL 10,77,36 
+h1    = 256
+h2    =  10
+c1    =  73
+l1    =  36  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[1]] } %>%
+  seecol()
+
+# Theme blue after pulling up chroma #185EBD  HCL 256,85,41
+# matching red from IWH: #b53d43  HCL 10,90,44 
+h1    = 256
+h2    =  10
+c1    =  90
+l1    =  41  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[2]] } %>%
+  seecol()
+
+# matching red from colorspace: #9a374d  HCL 2,67,38
+h1    = 256
+h2    =   2
+c1    =  73
+l1    =  38  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[3]] } %>%
+  seecol()
+
+pal_div[[4]] <- c('#1752a4', '#6277b4', '#959ec4', '#c4c8d3', '#f3f3e1', '#f0c3bb', '#e89396', '#db6072', '#ca1551')
+```
+
+```{r}
+
+pal_seqm <- list()
+
+# Blue + yellow sequential multi hue
+h1    = 256
+h2    =  53
+c1    =  73
+c2    =  89
+c_max =  89
+l1    =  36
+l2    =  76
+
+sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(1.5, 1), fixup = FALSE) %>%
+  .[!is.na(.)] %>% 
+  { . ->> pal_seqm[[1]] } %>%
+  seecol()
+
+sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(0.7, 1)) %>% 
+  { . ->> pal_seqm[[2]] } %>%
+  seecol()
+
+# result from above (#1952a5, #008599, #00a262, #85af00, #f1b034) used in croma.js color palette helper 
+# gives better result due to Bezier interpolation
+
+list(sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(0.7, 1)),
+     c('#1952a5', '#20639f', '#227596', '#218688', '#159873', '#4fa551', '#8cac36', '#bfb02b', '#f1b034')) %>%
+  seecol()
+
+c('#1952a5', '#20639f', '#227596', '#218688', '#159873', '#4fa551', '#8cac36', '#bfb02b', '#f1b034') %>%
+  { . ->> pal_seqm[[3]] } %>%
+  seecol()
+
+```
+
+
+
+

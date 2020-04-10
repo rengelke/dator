@@ -1,0 +1,190 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(fig.pos = 'H')
+
+library(magrittr)
+library(ggplot2)
+
+library(colorspace)
+library(pals)
+library(scales)
+library(unikn)
+
+```
+
+
+
+## HCL screen
+
+
+```{r}
+
+expand.grid(
+  h1     = -35,
+  h_last = 85,
+  c1     =  c(50, 60, 70, 80, 90, 100),
+  l1     =  c(40, 50, 60, 70, 80)
+) -> tmp
+
+
+tmp %>% apply(., 1, function (x) {
+  qualitative_hcl(n = 3, h = c(x["h1"], x["h_last"]), c = x["c1"], l = x["l1"]) 
+}) %>%
+  'colnames<-'(paste0("C ", tmp$c1, " / ", "L ", tmp$l1)) -> syst_palette
+  
+```
+
+
+```{r}
+data(ToothGrowth)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+
+bp <- ggplot(ToothGrowth, aes(x = dose, y = len)) + 
+  geom_boxplot() +
+  theme_classic()
+
+syst_palette %>% apply(., 2, function (x) {
+  bp + geom_boxplot(aes(color = dose)) +
+  scale_color_manual(values = x) 
+}) %>% 
+  ggpubr::ggarrange(plotlist=., common.legend = TRUE, 
+                    labels = paste0("C ", tmp$c1, " / ", "L ", tmp$l1),
+                    font.label = list(size = 10)) 
+ggsave("tmp_bp.pdf", width = 10, height = 18.0)
+
+```
+
+
+
+#### HCL space Color wheel
+
+https://graf1x.com/list-of-colors-with-color-names/
+
+
+```{r}
+
+# Create color wheel starting at Blue #1752A4  LCH 36 73 256
+
+#                                clean sapphire blue #0F52BA  37 88 258
+(lch <- c("#0F52BA") %>% colorspace::hex2RGB() %>%
+  as(., "polarLUV") %>% .@coords %>% round(0))
+
+h1 = lch[3]
+c1 = lch[2]
+l1 = lch[1]
+
+
+h_seq <- cbind.data.frame(
+    hx = seq(h1, h1+360, by=30),
+    hy = seq(h1, h1+360, by=30)-360
+) %>% 
+    dplyr::mutate(hz = ifelse(hx>360, hy, hx)) %$%
+    hz %>% unique()
+
+hex_list <- list()
+for (i in seq_along(h_seq)) {
+    
+    if (is.na(polarLUV(l1, c1, h_seq[i]) %>% hex())) {
+        hexi <- NA
+        cn <- 1
+            while (is.na(hexi)) {
+                hexi <- polarLUV(l1, c1-cn, h_seq[i]) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi <- polarLUV(l1, c1, h_seq[i]) %>% hex()
+    }
+    hex_list[[i]] <- hexi
+}
+
+col_wheel <- hex_list %>% do.call(c, .)
+
+col_wheel %>% seecol(hex = TRUE, rgb = FALSE, title = "Color Wheel")
+
+#complementary
+col_wheel[c(1,7)] %>% seecol()
+
+#analogous
+col_wheel[c(12,1,2)] %>% seecol()
+
+#split complementary
+col_wheel[c(1,6,8)] %>% seecol()
+
+#square
+col_wheel[c(1,4,7,10)] %>% seecol()
+
+#tetradic1
+col_wheel[c(1,3,7,9)] %>% seecol()
+
+#tetradic2
+col_wheel[c(1,5,7,11)] %>% seecol()
+
+```
+
+
+
+```{r}
+
+
+(lch <- c("#539987") %>% colorspace::hex2RGB() %>%
+  as(., "polarLUV") %>% .@coords %>% round(0))
+
+h1 = lch[3]
+c1 = lch[2]
+l1 = lch[1]
+
+
+h_seq <- cbind.data.frame(
+    hx = seq(h1, h1+360, by=30),
+    hy = seq(h1, h1+360, by=30)-360
+) %>% 
+    dplyr::mutate(hz = ifelse(hx>360, hy, hx)) %$%
+    hz %>% unique()
+
+hex_list <- list()
+for (i in seq_along(h_seq)) {
+    
+    if (is.na(polarLUV(l1, c1, h_seq[i]) %>% hex())) {
+        hexi <- NA
+        cn <- 1
+            while (is.na(hexi)) {
+                hexi <- polarLUV(l1, c1-cn, h_seq[i]) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi <- polarLUV(l1, c1, h_seq[i]) %>% hex()
+    }
+    hex_list[[i]] <- hexi
+}
+
+col_wheel <- hex_list %>% do.call(c, .)
+
+col_wheel %>% seecol(hex = TRUE, rgb = FALSE, title = "Color Wheel")
+
+#complementary
+col_wheel[c(1,7)] %>% seecol(title = "complementary")
+
+#analogous
+col_wheel[c(12,1,2)] %>% seecol(title = "analogous")
+
+#split complementary
+col_wheel[c(1,6,8)] %>% seecol(title = "split complementary")
+
+#square
+col_wheel[c(1,4,7,10)] %>% seecol(title = "square")
+
+#tetradic1
+col_wheel[c(1,3,7,9)] %>% seecol(title = "tetradic 1")
+
+#tetradic2
+col_wheel[c(1,5,7,11)] %>% seecol(title = "tetradic 2")
+
+```
+

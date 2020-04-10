@@ -1,0 +1,444 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(magrittr)
+library(ggplot2)
+library(colorspace)
+library(unikn)
+
+```
+
+
+## Creating a custom palette
+
+1. Selected 2-3 main theme colors: jpr_theme, acs_theme
+2. Selected extended color palette from HP and sorted in IWantHue by diff
+
+
+```{r}
+
+list(
+  theme1 = c("#dd1a22", "#1077aa", "#9b2272", "#108173", "#50419a") %>%
+  `names<-`(c("maximum red", "cerulean", "amaranth deep purple", "deep green-cyan turquoise", "blue-magenta violet")),
+  
+  theme2 = c("#ee1c25", "#0f79ab", "#f36f25", "#118173", "#9b2272", "#595758") %>%
+  `names<-`(c("pigment red", "cerulean", "vivid tangelo", "deep green-cyan turquoise", 
+              "amaranth deep purple", "davy's grey")), 
+  
+  theme3 = c("#ee6725", "#027f6f", "#dd252d", "#595758") %>%
+    `names<-`(c("deep carrot orange", "pine green", "permanent geranium lake", "davy's grey")) 
+) %>%
+{. ->> theme_colors } %>%
+  lapply(seecol)
+
+
+```
+
+#### IWantHue generated palette
+
+- Select 5 color palette and manually pick first colors from the theme.
+- Adjust C and L around the values of selected colors
+- Reroll palette and sort by difference
+
+```{r}
+
+# # select HCL values here:
+# colorspace::choose_color()
+
+(col_vector_1 <- c(theme_colors[[1]][1], theme_colors[[2]][-c(1,6)]))
+
+(col_coord_1 <- colorspace::hex2RGB(col_vector_1) %>%
+  as(., "polarLAB") %>% .@coords)
+                #bring C closer to first color's C 
+
+(col_vector_2 <- theme_colors[[2]][2:4])
+
+(col_coord_2 <- colorspace::hex2RGB(col_vector_2) %>%
+  as(., "polarLAB") %>% .@coords)
+                #bring C closer to first color's C 
+
+```
+
+```{r}
+
+# C and L in HCL/polarLAB space ranges based on 2 or more base theme colors 
+
+# check if original values in range 
+# modify original values +/-15 from mean
+
+col_coord_2[, "C"] %>% round(0) %>% print() %>% mean() %>% round()
+col_coord_2[, "C"] %>% mean() %>% -c(20, -20) %>% round(0)  
+                                                            
+col_coord_2[, "L"] %>% round(0) %>% print() %>% mean() %>% round()
+col_coord_2[, "L"] %>% mean() %>% -c(20, -20) %>% round(0)
+
+
+list(
+    c("#0f79ab", "#de7445", "#118173"),  # chosen colors after adjustment  
+    c("#0f79ab", "#d9723a", "#378769", "#b76299"),  # chosen colors + 1
+    c("#0f79ab", "#d9723a", "#378769", "#b55f9a", "#8a8f84"),
+    
+    c("#0f79ab", "#a77955"),  # first color + 1 partner
+    c("#0f79ab", "#888d45", "#bf5d7e"),  # first color + 2 partner (keep previous base colors if possible)
+    c("#0f79ab", "#a767b0", "#769349", "#c06352"),  # first color + 3 partner
+    
+    c("#f36f25", "#966c95"),  # second color + 1 partner
+    c("#f36f25", "#a66ba4", "#7b8f4e"),  # second color + 2 partner    
+    c("#f36f25", "#8c75be", "#75924d", "#bf5a66"),  # second color + 3 partner    
+    
+    c("#118173", "#b4697c"),  # third color + 1 partner
+    c("#118173", "#a46aab", "#b37543"),  # second color + 2 partner    
+    c("#118173", "#c26054", "#996eb6", "#848f3d")  # second color + 3 partner   
+
+) %>% {. ->> custom_qual_palette } %>%
+    seecol(title = "`I Want Hue` generated palettes")
+
+# create_palette("#1851a4", plot = FALSE) %>% 
+#   seecol(title = "Colors relative to initial color according to color wheel theory")
+
+```
+
+
+
+```{r}
+
+# strategy 1: manual adjsutments
+# 1. manually adjust extreme outliers in C (mean +/-20 range is okay); not always possible when keeping hue constant
+# 2. manually adjust extreme outliers in H (+/-5 range is okay)
+# 3. check greyscale in viz palette and make further outlier corrections
+col_coord_1[, "C"] %>% round(0) %>% print() %>% mean() %>% round()
+col_coord_1[, "C"] %>% mean() %>% -c(20, -20) %>% round(0)  
+col_coord_1[, "L"] %>% round(0) %>% print() %>% mean() %>% round()
+col_coord_1[, "L"] %>% mean() %>% -c(5, -5) %>% round(0)
+
+c("#cd3b31", "#007ab1", "#d25402", "#008373", "#ae3c84")
+
+
+# strategy 2: manual adjsutments and fit color space
+# 1. apply strategy 1
+# 2. set colorspace according to min/max C and L
+# 2. fit color space (min and max values) keeping hue constant; lock single colors if necessary
+
+c("#cd3d37", "#2b78b5", "#ca5a0a", "#1b846e","#af3f88")
+
+
+# strategy 3: manual adjsutments and fit color space full
+# 1. apply strategy 1
+# 2. set colorspace according to min/max C and L
+# 2. fit color space completely
+
+c("#ca5253", "#7b83cf", "#c98c41", "#70a65e", "#bd5fab")
+
+
+# strategy 4: max C/L
+# 1. manually set values to be in range relative to max C/L
+col_coord_1[, "C"] %>% max() %>% -c(25, -1) %>% round(0)  
+col_coord_1[, "L"] %>% max() %>% -c(10, -1) %>% round(0)  
+
+c("#ed2f2d", "#0080e3", "#e66419", "#00964c", "#c94d9b")
+
+# strategy 5: min C/L
+# 1. manually set values to be in range relative to min C/L
+col_coord_1[, "C"] %>% min() %>% -c(1, -25) %>% round(0) 
+col_coord_1[, "L"] %>% min() %>% -c(1, -10) %>% round(0)  
+
+c("#bf493c", "#0677a9", "#b25423", "#087e70", "#b34189")
+
+
+# strategy 6: max C / min L
+# 1. manually set values to be in range relative to max C / min L
+col_coord_1[, "C"] %>% max() %>% -c(25, -1) %>% round(0)  
+col_coord_1[, "L"] %>% min() %>% -c(3, -10) %>% round(0)  
+
+c("#dd1a22", "#0074d6", "#c34700", "#008334", "#b43388")
+
+# strategy 7: min C / max L
+# 1. manually set values to be in range relative to min C / max L
+col_coord_1[, "C"] %>% min() %>% -c(3, -25) %>% round(0) 
+col_coord_1[, "L"] %>% max() %>% -c(10, -1) %>% round(0)  
+
+
+c("#ce5647", "#2683b6", "#e07b47", "#299081", "#c35498")
+
+
+
+
+```
+
+```{r}
+
+list(
+    c("#dd1a22", "#0f79ab", "#f36f25", "#118173", "#9b2272", "#595758"),  # chosen original colors 
+    c("#cd3b31", "#007ab1", "#d25402", "#008373", "#ae3c84", "#716f70"),  # strategy 1
+    c("#cd3d37", "#2b78b5", "#ca5a0a", "#1b846e","#af3f88", "#716f70"),  # strategy 2
+    c("#ca5253", "#7b83cf", "#c98c41", "#70a65e", "#bd5fab", "#7b797a"),  # strategy 3
+    c("#ed2f2d", "#0080e3", "#e66419", "#00964c", "#c94d9b", "#7e7b7c"),  # strategy 4
+    c("#bf493c", "#0677a9", "#b25423", "#087e70", "#b34189", "#716f70"),  # strategy 5
+    c("#dd1a22", "#0074d6", "#c34700", "#008334", "#b43388", "#716f70"),  # strategy 6
+    c("#ce5647", "#2683b6", "#e07b47", "#299081", "#c35498", "#807e7f"),  # strategy 7
+    
+    c('#007ab1', '#5597c2', '#87b4d2', '#b8d1e2', '#efedee', '#eec3be', '#e8988e', '#dd6d5f', '#cd3b31'),  # strategy 1
+    c('#2b78b5', '#6494c5', '#92b2d5', '#bed0e3', '#efedee', '#eec3bf', '#e89991', '#dd6e63', '#cd3d37'),  # strategy 2
+    c('#0080e3', '#5e9be9', '#8eb7ee', '#bcd3f0', '#efedee', '#f8c4c0', '#fa998f', '#f66b5e', '#ed2f2d'),  # strategy 4
+    c('#0074d6', '#5b92e0', '#8bb1e8', '#bacfee', '#efedee', '#f6c0bd', '#f49289', '#ec6156', '#dd1a22'),  # strategy 6 
+    c('#2683b6', '#629dc6', '#90b8d5', '#bed3e3', '#efedee', '#edc7c2', '#e7a298', '#dc7d6e', '#ce5647')  # strategy 7
+    
+    # c("#2859ad", "#dc9d1e", "#008d3f"),  # chosen colors after adjustment  
+    # #c("#2859ad", "#dc9d1e", "#cc507c", "#008d3f"),  # chosen colors + 1
+    # #c("#2859ad", "#dc9d1e", "#bf58ab", "#008d3f", "#cc554a"),
+    # 
+    # c("#2859ad", "#b57d43"),  # first color + 1 partner
+    # c("#2859ad", "#889b41", "#ce556b"),  # first color + 2 partner (keep previous base colors if possible)
+    # c("#2859ad", "#889b41", "#c157a9", "#cc5f44"),  # first color + 3 partner
+    # 
+    # c("#dc9d1e", "#b15da3"),  # second color + 1 partner
+    # c("#dc9d1e", "#b15da3", "#c95348"),  # second color + 2 partner    
+    # c("#dc9d1e", "#b15da3", "#689f48", "#c95348"),  # second color + 3 partner    
+    # 
+    # c("#008d3f", "#bb5f88"),  # third color + 1 partner
+    # c("#008d3f", "#a662b7", "#c66a42"),  # second color + 2 partner    
+    # c("#008d3f", "#a662b7", "#b28f34", "#cc5051"),  # second color + 3 partner   
+    # 
+    # 
+    # c("#0b56a4", "#f2b544", "#4f585f", "#7b8d63"),  # chosen colors after adjustment  
+    # c("#0b56a4", "#f2b544", "#4f585f", "#7b8d63", "#c66683"),  
+    # 
+    # c("#0b56a4", "#a4875d"),
+    # c("#0b56a4", "#7b8d63", "#c76876"),
+    # c("#0b56a4", "#c1764b", "#bf6aa1", "#7b8d63"),
+    # 
+    # c("#f2b544", "#a4875d"),
+    # c("#f2b544", "#7b8d63", "#c76876"),
+    # c("#f2b544", "#c1764b", "#bf6aa1", "#7b8d63"),
+    # 
+    # c("#4f585f", "#a88753"),
+    # c("#4f585f", "#bc6a92", "#7b8d63"),
+    # c("#4f585f", "#c46f51", "#a673b5", "#7b8d63"),
+    # 
+    # theme_colors[1:7, 5] #should be ordered in IWH
+) %>% {. ->> custom_qual_palette } %>%
+    seecol(title = "`I Want Hue` generated palettes")
+
+# create_palette("#1851a4", plot = FALSE) %>% 
+#   seecol(title = "Colors relative to initial color according to color wheel theory")
+```
+
+
+
+Diverging palette
+
+Method 1:
+1: use 2 complementary colors (eg. blue/red) from previously defined qulitative palette 
+ and let hcl_diverging function do the scaling
+2: use 1 color and select second color in IWH 
+    2a: using C and L space similar to the first color
+    2b: using default IWH settings
+
+
+```{r, eval=FALSE}
+
+# select HCL values here:
+colorspace::choose_color()
+
+```
+
+
+```{r}
+
+col_gradient <- c("#2859ad", "#cc554a")
+
+(col_coord_grad_luv <- colorspace::hex2RGB(col_gradient) %>%
+  as(., "polarLUV") %>% .@coords)
+
+(col_coord_grad_lab <- colorspace::hex2RGB(col_gradient) %>%  #used in IWH
+  as(., "polarLAB") %>% .@coords)
+
+# blue from previously defined qualitative palette
+hcl_1 <- rev(col_coord_grad_luv[1, ]) 
+# red from previously defined qualitative palette
+hcl_2 <- rev(col_coord_grad_luv[2, ])
+
+# red from IWH with blue ref: C +/-20,  L +/-20 range 
+rev(col_coord_grad_lab[2, ]) %>% .["H"] %>% "+"(c(-30, 30)) %>% round(0)
+rev(col_coord_grad_lab[1, ]) %>% .["C"] %>% "+"(c(-10, 10)) %>% round(0)
+rev(col_coord_grad_lab[1, ]) %>% .["L"] %>% "+"(c(-5, 5)) %>% round(0)
+
+hcl_3 <- colorspace::hex2RGB("#a13934") %>%
+  as(., "polarLUV") %>% .@coords %>% rev()
+
+# red from IWH with blue ref: C +/-20,  L +/-20 range 
+rev(col_coord_grad_lab[2, ]) %>% .["H"] %>% "+"(c(-30, 30)) %>% round(0)
+rev(col_coord_grad_lab[1, ]) %>% .["C"] %>% "+"(c(-20, 30)) %>% round(0)
+rev(col_coord_grad_lab[1, ]) %>% .["L"] %>% "+"(c(-20, 30)) %>% round(0)
+
+hcl_4 <- colorspace::hex2RGB("#be5146") %>%
+  as(., "polarLUV") %>% .@coords %>% rev()
+
+
+# red from IWH with blue ref: H 0-360, C +/-25,  L +/-25 range 
+c(0, 360)
+rev(col_coord_grad_lab[1, ]) %>% .["C"] %>% "+"(c(-10, 10)) %>% round(0)
+rev(col_coord_grad_lab[1, ]) %>% .["L"] %>% "+"(c(-5, 5)) %>% round(0)
+
+hcl_5 <- colorspace::hex2RGB("#954429") %>%
+  as(., "polarLUV") %>% .@coords %>% rev()
+
+
+list(
+    colorspace::diverging_hcl(n = 11, h1 = hcl_1[1], h2 = hcl_3[1], 
+                                  cmax = max(hcl_1[2], hcl_3[2]), 
+                                  l1 = min(hcl_1[3], hcl_3[3]), 
+                                  l2 = l_max, p1 = 1.0),
+    colorspace::diverging_hcl(n = 11, h1 = hcl_1[1], h2 = hcl_3[1], 
+                                  cmax = mean(hcl_1[2], hcl_3[2]), 
+                                  l1 = mean(hcl_1[3], hcl_3[3]), 
+                                  l2 = l_max, p1 = 1.0),
+    
+    colorspace::diverging_hcl(n = 11, h1 = hcl_1[1], h2 = hcl_4[1], 
+                                  cmax = max(hcl_1[2], hcl_4[2]), 
+                                  l1 = min(hcl_1[3], hcl_4[3]), 
+                                  l2 = l_max, p1 = 1.0),
+    colorspace::diverging_hcl(n = 11, h1 = hcl_1[1], h2 = hcl_4[1], 
+                                  cmax = mean(hcl_1[2], hcl_4[2]), 
+                                  l1 = mean(hcl_1[3], hcl_4[3]), 
+                                  l2 = l_max, p1 = 1.0)
+) %>% unique()  %>% seecol()
+
+# examples for predefined palettes
+#colorspace::hcl_palettes("diverging", n = 7, plot = F) %>% as.data.frame()
+
+l_max = 90
+
+list(
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_2[1], 
+                                  cmax = (hcl_1[2]+hcl_2[2])/2, 
+                                  l1=min(hcl_1[3], hcl_2[3]), 
+                                  l2=l_max, p1=1.0),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_2[1], 
+                                  cmax = (hcl_1[2]+hcl_2[2])/2, 
+                                  l1=min(hcl_1[3], hcl_2[3]), 
+                                  l2=l_max, p1=1.5),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_3[1], 
+                                  cmax = (hcl_1[2]+hcl_3[2])/2, 
+                                  l1=min(hcl_1[3], hcl_3[3]), 
+                                  l2=l_max, p1=1.0),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_3[1], 
+                                  cmax = (hcl_1[2]+hcl_3[2])/2, 
+                                  l1=min(hcl_1[3], hcl_3[3]), 
+                                  l2=l_max, p1=1.5),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_4[1], 
+                                  cmax = (hcl_1[2]+hcl_4[2])/2, 
+                                  l1=min(hcl_1[3], hcl_4[3]), 
+                                  l2=l_max, p1=1.0),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_4[1], 
+                                  cmax = (hcl_1[2]+hcl_4[2])/2, 
+                                  l1=min(hcl_1[3], hcl_4[3]), 
+                                  l2=l_max, p1=1.5),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_5[1], 
+                                  cmax = (hcl_1[2]+hcl_5[2])/2, 
+                                  l1=min(hcl_1[3], hcl_5[3]), 
+                                  l2=l_max, p1=1.0),
+    colorspace::diverging_hcl(n=11, h1=hcl_1[1], h2=hcl_5[1], 
+                                  cmax = (hcl_1[2]+hcl_5[2])/2, 
+                                  l1=min(hcl_1[3], hcl_5[3]), 
+                                  l2=l_max, p1=1.5)
+) %>% {. ->> custom_div_palette_1 } 
+
+
+
+
+newpal(col = c("#2859ad", "#cc554a", "#FFFFFF", # starting color
+               custom_div_palette_1[[1]][1], custom_div_palette_1[[1]][11], "#FFFFFF", 
+               custom_div_palette_1[[3]][1], custom_div_palette_1[[3]][11], "#FFFFFF",
+               custom_div_palette_1[[5]][1], custom_div_palette_1[[5]][11], "#FFFFFF",
+               custom_div_palette_1[[7]][1], custom_div_palette_1[[7]][11]),
+       names = c("cyan cobalt blue", "cedar chest", " ",
+                 "green blue", "sweet brown", " ",
+                 "green blue", "sweet brown", " ",
+                 "green blue", "sweet brown", " ",
+                 "green blue", "chinese red"
+                 )) %>% 
+  seecol(rgb=FALSE, title = "Color pairs for diverging gradients")
+
+custom_div_palette_1 %>%
+  seecol()
+```
+
+Method 2:
+1: use 2 complementary colors (eg. blue/red) from previously defined qulitative palette 
+ and let scale logically
+ 1a: using mean C and L from both colors as starting points
+ 1b: using max C and min L from both  colors as starting points
+    
+
+```{r}
+
+#blue
+hcl_1
+#red
+hcl_2
+
+n <- 11
+l_max <- 90
+h_grey <- 94
+
+### a: scaling from/to mean C and L values
+c_seq_a <- seq(mean(c(hcl_1[2], hcl_2[2])), 0, 
+               by = -1 * mean(c(hcl_1[2], hcl_2[2])) / floor(n/2))
+l_seq_a <- seq(mean(c(hcl_1[3], hcl_2[3])), l_max, 
+               by = (l_max - mean(hcl_1[3], hcl_2[3])) / floor(n/2))
+
+### b: scaling from/to max C and min L values
+c_seq_b <- seq( max(hcl_1[2], hcl_2[2]), 0, 
+                by = -1 * max(hcl_1[2], hcl_2[2]) / floor(n/2))
+l_seq_b <- seq( min(hcl_1[3], hcl_2[3]), l_max, 
+                by = (l_max - min(hcl_1[3], hcl_2[3])) / floor(n/2))
+
+
+color1 <- cbind(hcl_1[1], c_seq_a, l_seq_a)
+#color1[1, ] <- hcl_1
+color1[dim(color1)[1], ] <- c(h_grey, 0, l_max)
+color2 <- cbind(hcl_2[1], c_seq_a, l_seq_a)
+#color2[1, ] <- hcl_2
+color2[dim(color2)[1], ] <- c(h_grey, 0, l_max)
+my_gradient_a <- rbind(color1, color2 %>% apply(., 2, rev) %>% .[-1, ]) %>%
+    `colnames<-`(c("H", "C", "L"))
+
+color1 <- cbind(hcl_1[1], c_seq_b, l_seq_b)
+#color1[1, ] <- hcl_1
+color1[dim(color1)[1], ] <- c(h_grey, 0, l_max)
+color2 <- cbind(hcl_2[1], c_seq_b, l_seq_b)
+#color2[1, ] <- hcl_2
+color2[dim(color2)[1], ] <- c(h_grey, 0, l_max)
+my_gradient_b <- rbind(color1, color2 %>% apply(., 2, rev) %>% .[-1, ]) %>%
+    `colnames<-`(c("H", "C", "L"))
+
+list(
+    my_gradient_a %>% apply(., 1, function (x) hcl(x[1], x[2], x[3])), 
+    my_gradient_b %>% apply(., 1, function (x) hcl(x[1], x[2], x[3]))
+) %>%
+    {. ->> custom_div_palette_2} %>%
+    seecol()
+
+```
+
+All gradients combined
+
+```{r}
+
+c(custom_qual_palette,
+  custom_div_palette_2,
+  custom_div_palette_1) %>% 
+  {. ->> custom_div_palette} %>%
+  seecol(title = "JPR theme inspired palettes")
+
+```
+
