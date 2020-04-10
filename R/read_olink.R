@@ -1,12 +1,3 @@
-
-# # # Does not work with read_omics as the underlying extract_rectangle because:
-# # data.table::fread(file,
-# #                   na.strings = "",
-# #                   header     = FALSE,
-# #                   integer64  = 'numeric', fill=TRUE, sep = ",")
-#
-# file <- "C:/Users/rue2006/Documents/R_wd/mazloum_mouse/data/20200203_WCQO-20-001B/20200203_WCQO-20-001B.csv"
-
 #' Read Olink
 #'
 #' Read data from Olink csv file
@@ -25,6 +16,8 @@ read_olink <- function (file) {
     assertive.files::assert_all_are_existing_files(file)
 
 
+    # parameter currently not definable
+    # using fixed fid and fname variables
     fid_var <- "OlinkID"
     fname_var <- "Assay"
 
@@ -37,30 +30,36 @@ read_olink <- function (file) {
                            na.strings = c("NA", "NaN", ""))
 
 
-    fid_rows = 6   #according to fid_var
-    fid_cols = 2:97
+    svar_rows	= object_raw[, 1] %>% grep(pattern = "Assay")
+    svar_cols	= (object_raw[svar_rows, ] %>% grep(pattern = "Plate ID") %>% .[1]):
+        length(object_raw[svar_rows, ])
 
-    sid_rows = 8:103
+    fid_rows = object_raw[, 1] %>% grep(pattern = "OlinkID")    #according to fid_var
+    fid_cols = 2:(object_raw[svar_rows, ] %>% grep(pattern = "Plate ID") %>% .[1] %>% `-`(1))
+
+    sid_rows = (object_raw[, 1] %>% grep(pattern = "OlinkID") %>% `+`(2)):
+        (object_raw[, 1] %>% grep(pattern = "LOD") %>% .[1] %>% `-`(2))
     sid_cols = 1
 
-    expr_rows	= 8:103
-    expr_cols	= 2:97
+    expr_rows	= sid_rows
+    expr_cols	= fid_cols
 
-    fvar_rows	= c(3:6, 105:106)
+    fvar_rows	= c(
+        (object_raw[, 1] %>% grep(pattern = "Panel")):
+            (object_raw[, 1] %>% grep(pattern = "OlinkID")),
+        (object_raw[, 1] %>% grep(pattern = "LOD")):
+            (object_raw[, 1] %>% grep(pattern = "Missing Data freq."))
+        )
     fvar_cols	= 1
 
-    svar_rows	= 4
-    svar_cols	= 98:101
+    fdata_rows = fvar_rows
+    fdata_cols = fid_cols
 
-    fdata_rows = c(3:6, 105:106)
-    fdata_cols = 2:97
+    sdata_rows = sid_rows
+    sdata_cols = svar_cols
 
-    sdata_rows = 8:103
-    sdata_cols = 98:101
-
-
-    fname_rows = 4  #according to fname_var
-    fname_cols = 2:97
+    fname_rows = svar_rows  #according to fname_var
+    fname_cols = fid_cols
 
 
 
@@ -72,8 +71,8 @@ read_olink <- function (file) {
 
     exprs1 <- object_raw[expr_rows, expr_cols] %>%
         data.matrix() %>% t() %>%
-        `colnames<-`(fids1 %>% make.names(unique = TRUE)) %>%
-        `rownames<-`(sids1)
+        `rownames<-`(fids1 %>% make.names(unique = TRUE)) %>%
+        `colnames<-`(sids1)
 
 
     # Extract feature annotations

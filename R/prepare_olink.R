@@ -67,7 +67,7 @@ prepare_olink <- function (object,
     if ("sample_id" %in% autonomics.import::svars(object)) {
         autonomics.import::sdata(object)$sample_type <- ifelse(
             autonomics.import::sdata(object)$sample_id %>%
-                stringr::str_detect("^Neg Ctrl |^Ext Ctrl |^IPC "),
+                stringr::str_detect("^Neg Ctrl|^Ext Ctrl|^IPC"),
             "Control", "Sample")
         idx <- sdata(object)$sample_type %in% filter_sample_type
         idx <- idx & !is.na(idx)
@@ -102,12 +102,14 @@ prepare_olink <- function (object,
     if (rm_features_below_lod_for_some_sample) {
         exprs(object) %<>% apply(., 2, function (x) {
             idx <- (x <= fdata(object)$LOD)
+            idx <- idx & !is.na(idx)
             x[idx] <- NA
             x
         })
     } else {
-        exprs(object) %<>% apply(., 2, function (x) {
+        exprs(object) %>% apply(., 2, function (x) {
             idx <- (x <= fdata(object)$LOD)
+            idx <- idx & !is.na(idx)
             x[idx] <- 0.5*fdata(object)$LOD[idx]
             x
         })
