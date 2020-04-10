@@ -1,7 +1,7 @@
 #' Set cluster definitions
 #'
 #' @param object SummarizedExperiment object
-#' @param cluster_type type of cluster to generate: "pval", "pbins", "bins"
+#' @param cluster_type type of cluster to generate: "pval", "pbins", "bins", "custom"
 #' @param contrasts contrasts, as defined in clustedefs of SummarizedExperiment object, for which to generate clusters
 #' @param breaks numeric vector indicating p-value cutoffs for "pbins"
 #' @param sig_level p-value cutoff for significance cluster "pval"
@@ -11,15 +11,15 @@
 #' @export
 #'
 #' @importFrom magrittr %<>% %>%
-#' @import dplyr
 #' @import autonomics
 #'
 #' @examples add_cluster(object)
 add_cluster <- function (object,
-                         cluster_type = c("pval", "pbins", "bins"),
+                         cluster_type = c("pval", "pbins", "bins", "custom"),
                          contrasts = NULL,
                          breaks = c(0.05, 0.10, 0.20),
                          sig_level = 0.05,
+                         custom_cluster = NULL,
                          k = 5) {
 
 
@@ -41,7 +41,20 @@ add_cluster <- function (object,
         assertive.numbers::assert_all_are_greater_than(0) %>%
         assertive.numbers::assert_all_are_less_than_or_equal_to(25)
 
-    cluster_type <- match.arg(cluster_type, c("pval", "pbins", "bins"), several.ok = TRUE)
+    cluster_type <- match.arg(cluster_type, c("pval", "pbins", "bins", "custom"), several.ok = TRUE)
+    if (is.null(custom_cluster)) {
+        cluster_type <- cluster_type[cluster_type != "custom"]
+    }
+
+    if (is.null(contrasts) & "custom" %in% cluster_type) {
+        stop("Please define a single contrast when using `custom` cluster type")
+    }
+    if ("custom" %in% cluster_type) {
+        if (!all(c("feature_id", "clust_custom") %in% colnames(custom_cluster))) {
+            stop("`custom_cluster` object must be a data.frame containing `feature_id`
+                 and `clust_custom` columns")
+        }
+    }
 
     if (is.null(contrasts)) {
         contrasts <- names(object@metadata$contrastdefs)
@@ -103,6 +116,20 @@ add_cluster <- function (object,
                                   factor(levels = unique(sort(.)))) %>%
                 dplyr::select(-effect_tmp)
         }
+
+
+        if ("custom" %in% cluster_type) {
+
+            custom_cluster %<>%
+                dplyr::mutate(clust_custom = as.numeric(as.character(clust_custom)),
+                              clust_custom_label = paste0("Cluster ", .$clust_custom) %>%
+                                  factor(levels = unique(sort(.))))
+            clusterdefs %<>%
+                dplyr::left_join(., custom_cluster, by = "feature_id") %>%
+                dplyr::mutate(clust_custom_label = paste0("Cluster ", .$clust_custom) %>%
+                                  factor(levels = unique(sort(.))) )
+        }
+
 
         clusterdefs %<>%
             tibble::column_to_rownames(var = "feature_id")

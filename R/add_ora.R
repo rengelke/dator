@@ -3,7 +3,7 @@
 #'
 #' @param object SummarizedExperiment object
 #' @param db annotation database to use: "wiki", "kegg", "go_bp", "go_mf", "go_cc", "msigH", "msigC1", "msigC2"
-#' @param cluster_type type of cluster to generate: "pval", "pbins", "bins"
+#' @param cluster_type type of cluster to generate: "pval", "pbins", "bins", "custom"
 #' @param contrasts contrasts, as defined in clustedefs of SummarizedExperiment object
 #' @param sig_level p-value cutoff for significance cluster "pval"
 #' @param p_cutoff p-value cutoff for over-representation analysis results
@@ -16,14 +16,13 @@
 #' @return updated SummarizedExperiment object
 #' @export
 #'
-#' @import magrittr
-#' @import dplyr
+#' @importFrom magrittr %<>% %>% %$%
 #' @import autonomics
 #'
 #' @examples add_ora(object, db = "wiki")
 add_ora <- function(object,
                     db = c("wiki", "kegg", "go_bp", "go_mf", "go_cc", "msigH", "msigC2", "msigC5", "custom"),
-                    cluster_type = c("pval", "pbins", "bins"),
+                    cluster_type = c("pval", "pbins", "bins", "custom"),
                     contrasts = NULL,
                     sig_level = 0.05,
                     p_cutoff = 0.05,
@@ -32,6 +31,7 @@ add_ora <- function(object,
                     breaks = c(0.05, 0.1, 0.2),
                     k = 5,
                     custom_db = NULL,
+                    custom_cluster = NULL,
                     ...) {
 
 
@@ -44,9 +44,7 @@ add_ora <- function(object,
     db <- match.arg(db, c("wiki", "kegg", "go_bp", "go_mf", "go_cc",
                           "msigH", "msigC2", "msigC5", "custom"), several.ok = FALSE)
 
-    if (is.null(contrasts)) {
-        contrasts <- names(object@metadata$contrastdefs)
-    }
+
     if (db == "custom") {
         if (is.null(custom_db)) {
             stop("Error: `custom` db parameter requires custom database containing term and gene columns.")
@@ -54,6 +52,27 @@ add_ora <- function(object,
             custom_db %<>% `colnames<-`(c("term", "gene"))
         }
     }
+
+
+    if (is.null(custom_cluster)) {
+        cluster_type <- cluster_type[cluster_type != "custom"]
+    }
+
+    if (is.null(contrasts) & "custom" %in% cluster_type) {
+        stop("Please define a single contrast when using `custom` cluster type")
+    }
+    if ("custom" %in% cluster_type) {
+        if (!all(c("feature_id", "clust_custom") %in% colnames(custom_cluster))) {
+            stop("`custom_cluster` object must be a data.frame containing `feature_id`
+                 and `clust_custom` columns")
+        }
+    }
+
+
+    if (is.null(contrasts)) {
+        contrasts <- names(object@metadata$contrastdefs)
+    }
+
 
     organism <- autonomics.annotate::infer_organism(fdata(object)$feature_uniprot[1:3],
                                                     "uniprot")
@@ -76,11 +95,12 @@ add_ora <- function(object,
 
 
 
-    object <- add_cluster(object,
-                          cluster_type = cluster_type,
+    object <- dator::add_cluster(object,
+                          cluster_type = c("pval", "pbins", "bins", "custom"),
                           contrasts = contrasts,
                           sig_level = sig_level,
                           breaks = breaks,
+                          custom_cluster = custom_cluster,
                           k = k)
 
     if (!all(contrasts == (attr(object@metadata$clusterdefs, which = "names")))) {
@@ -93,9 +113,11 @@ add_ora <- function(object,
     ora_list <- contrasts %>% lapply(function (x) {
 
         tmp_fdata <- fdata(object)
+        tmp_fdata$ENTREZID_cl <- tmp_fdata$ENTREZID %>%
+            dator::tidy_keys(na.rm = FALSE)
         gene_universe <- fdata(object)$ENTREZID[object@metadata$clusterdefs[[x]][, "p"] %>%
                                                     is.na() %>% `!`] %>%
-            dator::tidy_keys()
+            dator::tidy_keys(na.rm = TRUE)
 
 
 
@@ -114,11 +136,19 @@ add_ora <- function(object,
 
             if (db == "wiki") {
 
+                db_wiki %>%
+                    dplyr::filter(gene %in% tmp_fdata$ENTREZID_cl) %>%
+                    dplyr::group_by(gene) %>%
+                    dplyr::summarize(ENTREZID_cl = unique(gene),
+                              ID = paste(wpid, collapse = "/")) %>%
+                    dplyr::select(ENTREZID_cl, ID) %>%
+                    dplyr::left_join(tmp_fdata, ., by = "ENTREZID_cl")
+
                 ora_result <- group_ids %>% lapply(function (z) {
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
@@ -143,7 +173,7 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enrichKEGG(gene = gene_oi,
                                                 universe = gene_universe,
@@ -166,16 +196,17 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     tmp_res <- clusterProfiler::enrichGO(gene = gene_oi,
                                                          universe = gene_universe,
                                                          OrgDb = org_db,
                                                          ont = "BP",
+                                                         pAdjustMethod = "none",
                                                          pvalueCutoff = p_cutoff,
                                                          qvalueCutoff = q_cutoff,
                                                          readable = TRUE)
-                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify()}
+                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify(by = "pvalue")}
 
                     tmp_res@result %>%
                         dplyr::mutate(logp = -1*log(pvalue, 10),
@@ -192,16 +223,17 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     tmp_res <- clusterProfiler::enrichGO(gene = gene_oi,
                                                          universe = gene_universe,
                                                          OrgDb = org_db,
                                                          ont = "MF",
+                                                         pAdjustMethod = "none",
                                                          pvalueCutoff = p_cutoff,
                                                          qvalueCutoff = q_cutoff,
                                                          readable = TRUE)
-                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify()}
+                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify(by = "pvalue")}
 
                     tmp_res@result %>%
                         dplyr::mutate(logp = -1*log(pvalue, 10),
@@ -218,16 +250,17 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     tmp_res <- clusterProfiler::enrichGO(gene = gene_oi,
                                                          universe = gene_universe,
                                                          OrgDb = org_db,
                                                          ont = "CC",
+                                                         pAdjustMethod = "none",
                                                          pvalueCutoff = p_cutoff,
                                                          qvalueCutoff = q_cutoff,
                                                          readable = TRUE)
-                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify()}
+                    if (simplify_go) {tmp_res %<>% clusterProfiler::simplify(by = "pvalue")}
 
                     tmp_res@result %>%
                         dplyr::mutate(logp = -1*log(pvalue, 10),
@@ -244,7 +277,7 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
@@ -266,7 +299,7 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
@@ -289,7 +322,7 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
@@ -311,7 +344,7 @@ add_ora <- function(object,
 
                     gene_oi <- tmp_fdata %>% dplyr::filter(clust_id == z) %$%
                         ENTREZID %>%
-                        dator::tidy_keys()
+                        dator::tidy_keys(na.rm = TRUE)
 
                     clusterProfiler::enricher(gene = gene_oi,
                                               universe = gene_universe,
