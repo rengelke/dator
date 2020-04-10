@@ -1,34 +1,9 @@
 
-# library(magrittr)
-# library(autonomics)
-# library(ggplot2)
-#
-#
-# object <- dator:::data_sirt
-#
-#
-# object %<>% dator::add_ora(db = "wiki")
-# object %<>% dator::add_ora(db = "kegg")
-#
-# object %<>% add_ora(.,
-#                   db = "kegg",
-#                   cluster_type = "pbins",
-#                   contrasts = NULL,
-#                   sig_level = 0.05,
-#                   p_cutoff = 0.05,
-#                   q_cutoff = 0.2,
-#                   simplify_go = TRUE,
-#                   breaks = c(0.01, 0.05, 0.1, 0.2, 0.5),
-#                   # breaks = c(0.05),
-#                   k = 3,
-#                   custom_db = NULL)
-
-
 #' Plot over-representation analysis results
 #'
 #' @param object SummarizedExperiment object
 #' @param plot_type plot of type: "barplot", "dotplot1", "dotplot2", "heatmap", "heatplot"
-#' @param cluster_type over-representation analysis results from cluster type: "pval", "pbins", "bins"
+#' @param cluster_type over-representation analysis results from cluster type: "pval", "pbins", "bins", "custom"
 #' @param contrasts contrasts, as defined in clustedefs of SummarizedExperiment object
 #' @param db over-representation analysis results from annotation database: "wiki", "kegg", "go_bp", "go_mf", "go_cc", "msigH", "msigC1", "msigC2"
 #' @param exclude exclude cluster (not in use at the moment)
@@ -39,8 +14,7 @@
 #' @return Plot of over-representation analysis results
 #' @export
 #'
-#' @importFrom magrittr %>% %<>%
-#' @import dplyr
+#' @importFrom magrittr %>% %<>%  %$%
 #' @import ggplot2
 #' @import autonomics
 #'
@@ -69,7 +43,7 @@ plot_ora <- function(object,
     plot_type <- match.arg(plot_type, c("barplot", "dotplot1", "dotplot2",
                                         "heatmap", "heatplot"), several.ok = FALSE)
 
-    cluster_type <- match.arg(cluster_type, c("pval", "pbins", "bins"), several.ok = FALSE)
+    cluster_type <- match.arg(cluster_type, c("pval", "pbins", "bins", "custom"), several.ok = FALSE)
     db <- match.arg(db, c("wiki", "kegg", "go_bp", "go_mf", "go_cc",
                           "msigH", "msigC2", "msigC5", "custom"), several.ok = FALSE)
 
@@ -77,7 +51,7 @@ plot_ora <- function(object,
         contrasts <- names(object@metadata$contrastdefs)[1]
     }
 
-    message(paste0("Plotting with following parameters ...",
+    message(paste0("Creating ", plot_type,  " with following parameters ...",
                    "\ncontrast: ", contrasts,
                    "\ncluster type: ", cluster_type,
                    "\ndatabase: ", db))
@@ -106,11 +80,21 @@ plot_ora <- function(object,
         paste0(., "\n(n = ", n_clust, ")") %>%
         `names<-`(n_clust %>% names())
 
+    if (length(n_clust) <= 8) {
+        palette <- c("#5ca4a9", "#ed6a5a", "#8fbc62", "#bc8292", "#f49958",
+                     "#a994d1", "#a3a3a3", "#bba546")[1:length(n_clust)]
+    } else {
+        palette <- scales::hue_pal(h = c(0,360), c = 100, l = 65,
+                                   h.start = 10)(length(n_clust))
+    }
+    palette_div <- c('#f4f4f2', '#873636')
+
 
 
     if (plot_type == "barplot") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
+            dplyr::mutate(pval_trim = ifelse(pvalue < p_cutoff, pvalue, 1)) %>%
             dplyr::arrange(pvalue) %>%
             dplyr::group_by(Description) %>%
             dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
@@ -118,10 +102,12 @@ plot_ora <- function(object,
             dplyr::ungroup()
         if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
         tmp %<>%
-            dplyr::arrange(pvalue) %>%
+            dplyr::arrange(pval_trim) %>%
             dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::mutate(descr_levels = ifelse(pval_trim != 1, Description, NA)) %>%
             dplyr::mutate(Description = Description %>%
-                              factor(., levels = rev(unique(.))))
+                              factor(., levels = descr_levels %>%
+                                         unique() %>% rev() %>% .[!is.na(.)]))
 
         p <- tmp %>%
             ggplot(aes(x = Description, y = logp,
@@ -129,50 +115,57 @@ plot_ora <- function(object,
             geom_bar(stat = "identity") +
             facet_wrap(cluster_col[1],
                        nrow = 1,
-                       labeller = as_labeller(label2)) +
+                       labeller = as_labeller(label2)
+                       ) +
             coord_flip() +
             labs(x = "Term", y = expression(-log[10]~p~value)) +
             geom_hline(yintercept = 1.3, linetype = "dashed",
                        color = "grey", size = 0.75) +
-            scale_fill_manual(values = c("#5CA4A9", "#ED6A5A")) +
-            #scale_fill_manual(values = c("#00B2CA", "#D1495B")) +
-            #scale_fill_manual(values = c("#00B2CA", "#D96C06")) +
+            scale_fill_manual(values = palette) +
+            scale_y_discrete(limits = c(1, 5)) +
             theme_bw(base_size = 14) +
             theme(legend.position = "none")
 
-        }
-
+    }
 
 
     if (plot_type == "dotplot1") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
+            dplyr::mutate(pval_trim = ifelse(pvalue < p_cutoff, pvalue, 1)) %>%
             dplyr::arrange(pvalue) %>%
             dplyr::group_by(Description) %>%
             dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
             dplyr::filter(seen_one) %>%
             dplyr::ungroup()
+
         if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        p_lim <- c(8, 10) %>% .[abs(. - quantile(tmp$logp, probs = 0.96)) %>%
+                                  which.min()]
+        p_lim_breaks <- which(c(1.3, 3, 5, 8, 10) == p_lim)
+
         tmp %<>%
-            dplyr::arrange(pvalue) %>%
+            dplyr::arrange(pval_trim) %>%
             dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::mutate(descr_levels = ifelse(pval_trim != 1, Description, NA)) %>%
             dplyr::mutate(Description = Description %>%
-                              factor(., levels = rev(unique(.)))) %>%
+                              factor(., levels = descr_levels %>%
+                                         unique() %>% rev() %>% .[!is.na(.)])) %>%
             dplyr::mutate(gene_ratio = GeneRatio %>%
                               sapply(., function (x) eval(parse(text=x)))) %>%
             dplyr::mutate_(cluster = cluster_col) %>%
             dplyr::mutate(cluster = factor(cluster)) %>%
-            dplyr::mutate(logp = ifelse(logp >= 10, 10, logp))
+            dplyr::mutate(logp = ifelse(logp >= p_lim, p_lim, logp))
 
         p <- tmp %>%
             ggplot(aes(x = cluster, y = Description, size = gene_ratio, color = logp)) +
             geom_point() +
             scale_x_discrete(labels = label2) +
-            scale_color_continuous(low = "#85c1c5",  high = "#ED6A5A",
-                                   space = "Lab", limit = c(0, 10),
-                                   breaks = c(1.3, 3, 5, 8),
-                                   labels = c("0.05", "0.001", "1e-05", "1e-08")) +
-            labs(x = "", y = "Term", color = "p-value", size = "gene ratio") +
+            scale_color_gradient(low = "#b6d9dc", high = "#ed4934",
+                                 space = "Lab", limit = c(0, p_lim+0.5),
+                                 breaks = c(1.3, 3, 5, 8, 10)[1:p_lim_breaks],
+                                 labels = c("0.05", "0.001", "1e-05", "1e-08")[1:p_lim_breaks]) +
+            labs(x = "", y = "Term", color = "p-value", size = "protein ratio") +
             theme_bw()
 
     }
@@ -181,20 +174,28 @@ plot_ora <- function(object,
     if (plot_type == "dotplot2") {
 
         tmp <- object@metadata[[paste0("ora_", db)]][[contrasts]][[cluster_type]] %>%
+            dplyr::mutate(pval_trim = ifelse(pvalue < p_cutoff, pvalue, 1)) %>%
             dplyr::arrange(pvalue) %>%
             dplyr::group_by(Description) %>%
             dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
             dplyr::filter(seen_one) %>%
             dplyr::ungroup()
+
         if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        p_lim <- c(8, 10) %>% .[abs(. - quantile(tmp$logp, probs = 0.96)) %>%
+                                  which.min()]
+        p_lim_breaks <- which(c(1.3, 3, 5, 8, 10) == p_lim)
+
         tmp %<>%
             dplyr::mutate(gene_ratio = GeneRatio %>%
                               sapply(., function (x) eval(parse(text=x)))) %>%
-            dplyr::mutate(logp = ifelse(logp >= 10, 10, logp)) %>%
+            dplyr::mutate(logp = ifelse(logp >= p_lim, p_lim, logp)) %>%
             dplyr::arrange(dplyr::desc(gene_ratio)) %>%
             dplyr::arrange_at(dplyr::vars(dplyr::starts_with("clust_"))) %>%
+            dplyr::mutate(descr_levels = ifelse(pval_trim != 1, Description, NA)) %>%
             dplyr::mutate(Description = Description %>%
-                              factor(., levels = rev(unique(.))))
+                              factor(., levels = descr_levels %>%
+                                         unique() %>% rev() %>% .[!is.na(.)]))
 
         p <- tmp %>%
             ggplot(aes(x = gene_ratio, y = Description, size = Count, color = logp)) +
@@ -202,13 +203,13 @@ plot_ora <- function(object,
                        nrow = 1,
                        labeller = as_labeller(label2)) +
             geom_point() +
-            scale_color_gradient(low = "grey",  high = "red2",
-                                   space = "Lab", limit = c(0, 10),
-                                   breaks = c(1.3, 3, 5, 8),
-                                   labels = c("0.05", "0.001", "1e-05", "1e-08")) +
-            labs(x = "gene ratio", y = "Term", color = "p-value", size = "count") +
+            scale_color_gradient(low = "#b6d9dc", high = "#ed4934",
+                                 space = "Lab", limit = c(0, p_lim+0.5),
+                                 breaks = c(1.3, 3, 5, 8, 10)[1:p_lim_breaks],
+                                 labels = c("0.05", "0.001", "1e-05", "1e-08")[1:p_lim_breaks]) +
+            labs(x = "protein ratio", y = "Term", color = "p-value", size = "count") +
+            scale_x_continuous(breaks = c(0.05, 0.10)) +
             theme_bw()
-
         }
 
 
@@ -220,21 +221,25 @@ plot_ora <- function(object,
             dplyr::mutate(seen_one = dplyr::cumany(pvalue <= p_cutoff & qvalue <= q_cutoff)) %>%
             dplyr::filter(seen_one) %>%
             dplyr::ungroup()
+
         if (nrow(tmp) == 0) {stop("No significant terms to plot.")}
+        p_lim <- c(8, 10) %>% .[abs(. - quantile(tmp$logp, probs = 0.96)) %>%
+                                    which.min()]
+        p_lim_breaks <- which(c(1.3, 3, 5, 8, 10) == p_lim)
+
         tmp %<>%
             dplyr::select("Description", "logp", cluster_col[1]) %>%
-            dplyr::mutate(logp = ifelse(logp >= 10, 10, logp)) %>%
+            dplyr::mutate(logp = ifelse(logp >= p_lim, p_lim, logp)) %>%
             reshape2::dcast(as.formula(paste("Description", cluster_col[1], sep="~")),
                             value.var = "logp") %>%
             replace(is.na(.), 0) %>%
             tibble::column_to_rownames(var = "Description")
 
-
         p <- tmp %>% pheatmap::pheatmap(cluster_cols = FALSE,
-                                        labels_col = label2,
-                                        angle_col = 0,
-                                        color = colorRampPalette(
-                                            RColorBrewer::brewer.pal(n = 7, name = "PuBu"))(100),
+                                        labels_col = label2 %>% stringr::str_replace_all(., "\n.*$", ""),
+                                        angle_col = 315,
+                                        border_color = NA,
+                                        color = colorRampPalette(palette_div)(100),
                                         silent = TRUE)
     }
 
@@ -289,8 +294,8 @@ plot_ora <- function(object,
 
         p <- tmp %>% ggplot(aes(x = feature_name, y = Description)) +
             geom_tile(aes(fill= effect)) +
-            scale_colour_gradient2(low = scales::muted("red"), mid = "white",
-                                   high = scales::muted("blue"), midpoint = 0, space = "Lab",
+            scale_colour_gradient2(low = "#227faa", mid = "white",
+                                   high = "#bc4549", midpoint = 0, space = "Lab",
                                    na.value = "white", guide = "colourbar", aesthetics = "fill") +
             #theme_bw() +
             theme(panel.grid.major = element_blank(),
@@ -303,6 +308,4 @@ plot_ora <- function(object,
 p
 
 }
-
-
 
