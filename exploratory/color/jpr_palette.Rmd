@@ -1,0 +1,634 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(magrittr)
+library(ggplot2)
+library(colorspace)
+library(unikn)
+
+pal_qual <- list()
+pal_div <- list()
+pal_seq <- list()
+pal_seqm <- list()
+
+```
+
+
+## Journal theme colors
+
+1. Selected 2-3 main theme colors: jpr_theme, acs_theme
+2. Selected extended color palette from HP and sorted in IWantHue by diff
+```{r}
+c("#C9FFE5") %>% colorspace::hex2RGB(.) %>%
+    as(., "polarLUV") %>% .@coords
+```
+
+
+```{r}
+
+list(
+    c("#1C52A4", "#F2B035", "#048C3E"),
+    c("#1A0DAB", "#0039A6", "#044788", "#FDC82F", "#3D464D"),
+    c("#084695", "#0B56A4", "#7F8C6C", "#F2B544", "#FDC037"),
+    c("#0058A1", "#FBB900"),
+    c("#008D3F", "#DB6720", "#00a3e0", "#FDD941", "#009d9d", "#A6CC38", "#F2F2F2")
+) %>% 
+  { . ->> theme_colors} %>%
+  print() %>%
+  seecol(title = "JPR theme colors")
+
+theme_colors %>% lapply(function (x) {
+  colorspace::hex2RGB(x) %>%
+    as(., "polarLUV") %>% .@coords %>%
+    round(0)
+})
+
+```
+
+## Create a custom palette
+
+```{r, eval=FALSE}
+
+colorspace::choose_color()
+
+```
+
+The main theme color #1C52A4 is 'cyan cobalt blue' (HCL 256 72 36).
+
+Theme blue (#1752A4) and clean cyan cobalt blue (#28589C) differ mainly in chroma: C 72 vs C 63. The color with the higher chroma is usually preferable.
+
+
+Which colors fits to 'cyan cobalt blue'?
+
+![Martian Color Wheel](http://warrenmars.com/visual_art/theory/colour_wheel/martian_colour_wheel_24_hue_f.png)
+
+
+### Qualitative n=2 palette
+
+For the publication we would need two colors to distinguish between untreated and deplted plasma.
+
+Increasing the distance angle to get split complementary color pairs gives: (a) orange + green basil, (b) red + green. 
+
+
+```{r}
+
+# sequence as in ColorBrewer: qual Set2
+# red blue green purple orange yellow brown 
+# sample in coolors.co
+
+c("#ff7400", "#009f29", "#666666", "#136f63", "#db3d08") %>% seecol()
+c("#db3d08", "#05668d", "#009f29", "#c13c6d", "#ff7400", "#f0a202", "#7f513d") %>% seecol()
+
+c('#F26154', '#EC8C1A', '#BEA214', '#74B100') %>% seecol()
+c("#EB5E3B", "#F29222", "#B8A01D", "#87C423") %>% seecol()
+
+```
+
+## Freestyle
+
+```{r}
+# UP DPK1 DPK2 FT
+c('#2CAB56', '#BBB512', '#E78612', '#9E9E9E') %>% seecol()
+c('#2CAB56', '#D2CC01', '#F38C09', '#9E9E9E') %>% seecol()
+c('#7EAC35', '#FE7609', '#CF9221', '#9E9E9E') %>% seecol()
+c("#47a95e", "#ff8219", "#ff5e3c", "#829997")
+c('#39B35F', '#DA8C47', '#EE789C', '#86A2B0')
+c('#39B35F', '#E18845', '#F87763', '#86A2B0') %>% seecol()
+c('#39B35F', '#EC831C', '#FE6065')
+c('#0EB383', '#C39803', '#FB7184')
+c('#19B383', '#CD931E', '#FA774E')
+c('#5EB142', '#FA774E', '#FF6D8A')
+c('#4EB254', '#FF9803', '#FF5627')
+c('#37B448', '#FF751A', '#FF614C')
+c('#37B448', '#FF751A', '#FD5736')
+c('#37B448', '#FF751A', '#FF6A9A')
+c('#37B448', '#FF751A', '#FF506E')
+c("#06908f", "#ff770d", "#e55934")
+c("#37b448", "#b29700", "#f4673f")
+c('#4EB254', '#FF9803', '#FF5627')
+c('#4EB254', '#E4880F', '#FF7259')
+c('#1CB62E', '#9FA416', '#F47E0C')
+c('#22B614', '#B79D02', '#FF7435')
+c('#28B61D', '#AEA00B', '#FD7457')
+c('#28B61D', '#AEA00B', '#F57962')
+c('#04B64D', '#9AA606', '#F57B47')
+c('#04B64D', '#9AA606', '#EE8127')
+c('#0B8554', '#E07C01', '#CD513E')
+```
+
+
+
+```{r}
+
+c("#8ab745", "#e04f80", "#ff770d", "#586ba4", "#e56439", "#717c89") %>% seecol()
+c("#0892a5", "#e04f80", "#06908f", "#ff770d", "#e55934", "#7b7554")
+c("#2cab56", "#4d9de0", "#e15554", "#e1bc29", "#7768ae")
+
+```
+
+
+
+#### Select colors computationally
+
+##### Strategy 1
+
+Select colors using colorspace::qualitative_hcl function:
+Fixed H and C, ramp L
+
+
+```{r}
+
+# generate n=2 palettes with hcl wizzard: from H=256, C=72
+a1 = 30
+h1 = (256-180) + a1
+h2 = (256-180) - a1
+c1 = 72
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+
+# generate n=2 palettes with hcl wizzard: from H=256, C=72
+a1 = 35
+h1 = (256-180) + a1
+h2 = (256-180) - a1
+c1 = 72
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+
+# generate n=2 palettes with hcl wizzard: from H=256, C=72
+a1 = 45
+h1 = (256-180) + a1
+h2 = (256-180) - a1
+c1 = 72
+
+lv <- seq(62, 86, by=3)
+
+lv %>% lapply(., function (x) {
+  qualitative_hcl(n = 2, h = c(h1, h2), c = c1, l = x)
+}) %>% seecol(title = paste0("Split angle: ", a1, ", H1: ", h1, ", H2: ", h2))
+
+```
+
+The colors from the resulting palettes have an average distance of 56 in HCL space and are not very distinguishable.
+
+
+##### Strategy 2
+
+This is a similar approach using Colorpicker for color selection in the H-C pane.
+Select colors selecting the highest chroma available for specific H/L combinations:
+Fixed H, highest C, ramp L
+
+
+```{r}
+
+(a1 = 35)
+(h1 = (256-180) + a1)
+(h2 = (256-180) - a1)
+
+print("Manually selected in Colorpicker:")
+list(
+    c("#89CF05", "#FCAB33"), # l=1.1 = l=77
+    c("#83C605", "#FC9E00"), # l=1.05 = l=74
+    c("#7CBD04", "#F69407"), # l=1.0 = l=70
+    c("#76B404", "#EC8C00"), # l=0.95 = l=67
+    c("#70AB04", "#DF8600"), # l=0.9 = l=63
+    c("#6AA203", "#D28000"), # l=0.85 = l=60
+    c("#649A03", "#C47A00"), # l=0.8 = l=56
+    c("#5F9103", "#B97300")  # l=0.75 = l=53
+) %>% seecol()
+
+
+print("Computed using custom function:")
+
+l_seq <- c(77, 74, 70, 67, 63, 60, 56, 53)
+
+(a1 = 35)
+c1 = 140
+(h1 = (256-180) + a1)
+(h2 = (256-180) - a1)
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+pal_qual[[1]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[1] <- c("Split Complementary, a = 35")
+
+(a1 = 40)
+c1 = 140
+(h1 = (256-180) + a1)
+(h2 = (256-180) - a1)
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+pal_qual[[2]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[2] <- c("Split Complementary, a = 40")
+
+(a1 = 45)
+c1 = 140
+(h1 = (256-180) + a1)
+(h2 = (256-180) - a1)
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+pal_qual[[3]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[3] <- c("Split Complementary, a = 45")
+
+```
+
+Select hue where a large distance is expected in HCL space. This is 127 and 36 for green and orange as estimated using colorpicker
+
+```{r}
+
+c1 = 140
+(h1 = 127)
+(h2 = 36)
+
+pair_list <- list()
+for (i in seq_along(l_seq)) {
+    
+    # color 1
+    if (is.na(polarLUV(l_seq[i], c1, h1) %>% hex())) {
+        hexi1 <- NA
+        cn <- 1
+            while (is.na(hexi1)) {
+                hexi1 <- polarLUV(l_seq[i], c1-cn, h1) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi1 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    # color 2
+    if (is.na(polarLUV(l_seq[i], c1, h2) %>% hex())) {
+        hexi2 <- NA
+        cn <- 1
+            while (is.na(hexi2)) {
+                hexi2 <- polarLUV(l_seq[i], c1-cn, h2) %>% hex()
+                cn = cn+1
+            }
+    } else {
+        hexi2 <- polarLUV(l_seq[i], c1, h1) %>% hex()
+    }
+    
+    pair_list[[i]] <- c(hexi1, hexi2)
+}
+
+pair_list %>% seecol()
+pal_qual[[4]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[4] <- c("Split Complementary, free angle")
+
+```
+
+
+
+#### Select colors using color selection tools
+
+##### I Want Hue
+
+Defined the polarLAB color space in I Want Hue includig only orange:green hue range and appealing C and L ranges
+H 55-155, C 45-90, L 50-80
+Roll palette using hard-force vector clustering until the desired hue combination with similar luminescence is generated. Colors are then adjusted for luminescence in HCL space.
+
+
+```{r}
+
+# H 60-155, C 60-100, L 60-80
+# hard-vector clustering
+
+list(
+  c('#27B845', '#F2831C'),
+  c('#08CD74', '#FD9D2F'),
+  c('#2BB607', '#E9842F'),
+  c("#00C047", "#F5854D"),
+  c('#2BCE3C', '#FF9B40'),
+  c("#4BC306", "#F4952B"),
+  c("#00D058", "#FE9C3E")
+) -> pair_list
+
+pair_list %>% seecol()
+pal_qual[[5]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[5] <- c("Split Complementary, IWH selected")
+
+```
+
+
+
+#### Select colors through inspiration
+
+Green/orange inspired by ColorLovers palettes. 
+Original color combination followed by Lmax, Cmax adjustment in HCL color space.
+
+
+```{r}
+
+list(
+    
+    c("#57896a", "#dc7726"),
+    c("#00A661", "#DB7623"),
+    
+    c("#7a871e", "#e55b13"),
+    c('#7B8820', '#DA581F'),
+    
+    c("#5f9834", "#fd8300"),
+    c('#66B70A', '#FC8210'),
+    
+    c("#02894b", "#e66912"),
+    c('#00894B', '#E76914'),
+    
+    c('#008C75', '#E73A1E'),
+    c('#099A56', '#EA5424'),
+    
+    c('#657745', '#FB8C00'),
+    c('#099A56', '#EA5424')
+    
+
+) -> pair_list
+
+pair_list %>% seecol()
+pal_qual[[6]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[6] <- c("Split Complementary, ColorLovers")
+
+```
+
+Green/orange inspired by Material Design. 
+Original color combination followed by Lmax, Cmax adjustment in HCL color space.
+
+
+```{r}
+
+list(
+    
+    c("#4CAF50", "#FB8C00"),
+    c('#00C325', '#FB8C07'),
+    
+    c("#43a047", "#ef6c00"),
+    c('#09AB23', '#EF6C10'),
+    
+    c("#4CAF50", "#FF9800"),
+    c('#1CCC32', '#FE980E')
+    
+) -> pair_list 
+
+pair_list %>% seecol()
+pal_qual[[7]] <- pair_list %>% do.call(rbind, .)
+names(pal_qual)[7] <- c("Split Complementary, Material Design")
+
+```
+
+
+
+#### Palettes using colorspace::qualitative_hcl
+
+
+```{r}
+
+# # select HCL values here:
+# colorspace::choose_color()
+
+(col_vector_1 <- theme_colors[[1]])
+
+(col_coord_1 <- colorspace::hex2RGB(col_vector_1) %>%
+  as(., "polarLUV") %>% .@coords) %>% round(0)
+
+# Main theme blue/yellow/green colors are very different  in L space. 
+# Blue gives a dark palette, yellow very bright 
+
+h1     = 256 
+h_last = -10
+c1     =  72
+l1     =  36
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>% 
+  seecol()
+
+h1     =  53 
+h_last = 360
+c1     =  89
+l1     =  76
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>% 
+  seecol()
+
+# Colors 2,3,5 in palette 5 are in same L range and can be used 
+h1     =  26 
+h_last =-278
+c1     = 100
+l1     =  57
+
+qualitative_hcl(n = 4, h = c(h1, h_last), c = c1, l = l1) %>%
+  seecol()
+
+
+```
+
+
+
+
+
+
+```{r}
+
+h1 = 256
+h2 = 256+120-360  # tetradic complementary red 
+c1 = 88
+l1 = 37
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, 90), power = 1.0) %>% seecol()
+
+```
+
+
+
+```{r, eval=FALSE}
+
+colorspace::choose_palette()
+
+```
+
+```{r}
+
+# Theme blue can be used for heatmap
+# matching red from IWH: #982F36  HCL 10,77,36 
+h1    = 256
+h2    =  10
+c1    =  73
+l1    =  36  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[1]] } %>%
+  seecol()
+
+# Theme blue after pulling up chroma #185EBD  HCL 256,85,41
+# matching red from IWH: #b53d43  HCL 10,90,44 
+h1    = 256
+h2    =  10
+c1    =  90
+l1    =  41  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[2]] } %>%
+  seecol()
+
+# matching red from colorspace: #9a374d  HCL 2,67,38
+h1    = 256
+h2    =   2
+c1    =  73
+l1    =  38  
+l_max =  90
+
+diverging_hcl(n = 9, h = c(h1, h2), c = c1, l = c(l1, l_max), power = 1) %>%
+  { . ->> pal_div[[3]] } %>%
+  seecol()
+
+pal_div[[4]] <- c('#1752a4', '#6277b4', '#959ec4', '#c4c8d3', '#f3f3e1', '#f0c3bb', '#e89396', '#db6072', '#ca1551')
+```
+
+```{r}
+
+pal_seqm <- list()
+
+# Blue + yellow sequential multi hue
+h1    = 256
+h2    =  53
+c1    =  73
+c2    =  89
+c_max =  89
+l1    =  36
+l2    =  76
+
+sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(1.5, 1), fixup = FALSE) %>%
+  .[!is.na(.)] %>% 
+  { . ->> pal_seqm[[1]] } %>%
+  seecol()
+
+sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(0.7, 1)) %>% 
+  { . ->> pal_seqm[[2]] } %>%
+  seecol()
+
+# result from above (#1952a5, #008599, #00a262, #85af00, #f1b034) used in croma.js color palette helper 
+# gives better result due to Bezier interpolation
+
+list(sequential_hcl(n = 9, h = c(256, 53), c = c(73, 89, 89), l = c(36, 76), power = c(0.7, 1)),
+     c('#1952a5', '#20639f', '#227596', '#218688', '#159873', '#4fa551', '#8cac36', '#bfb02b', '#f1b034')) %>%
+  seecol()
+
+c('#1952a5', '#20639f', '#227596', '#218688', '#159873', '#4fa551', '#8cac36', '#bfb02b', '#f1b034') %>%
+  { . ->> pal_seqm[[3]] } %>%
+  seecol()
+
+```
+
+
+```{r}
+
+pal_qual %>% saveRDS("pal_qual.rds")
+
+```
+
+
+

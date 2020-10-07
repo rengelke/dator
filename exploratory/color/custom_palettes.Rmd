@@ -1,0 +1,954 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(fig.pos = 'H')
+
+library(magrittr)
+library(ggplot2)
+
+library(colorspace)
+library(pals)
+library(scales)
+library(unikn)
+
+
+# forces a line before and after each plot
+# https://stackoverflow.com/questions/37030219/r-markdown-plots-within-a-loop-going-out-of-margin-when-typesetting-to-pdf
+my_plot_hook <- function(x, options)
+  paste("\n", knitr::hook_plot_tex(x, options), "\n")
+knitr::knit_hooks$set(plot = my_plot_hook)
+
+fig1_url <- "http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/figure/unnamed-chunk-7-1.png"
+
+```
+
+
+
+
+
+# Color Palettes
+
+## Palettes collection
+
+### Qualitative
+
+#### Freestyle
+
+```{r}
+
+# Color Brewer sequence 1: red blue green purple orange
+
+list(
+    set1 = c("#DE5262", "#3082A7", "#529E3A", "#7B68AB", "#F28B46"),
+    set1_hcl = c('#E05365', '#3B8CB3', '#43951D', '#956DE5', '#CD6803')
+    
+) %>% seecol()
+
+list(
+    set1 = c("#EC3745", "#4984D7", "#4CBA80", "#9D538D", "#F28933"),
+    set1_hcl = c('#FF525E', '#3392FB', '#0AA567', '#EA52CE', '#DA7706')
+    
+) %>% seecol()
+
+list(
+    set1 = c("#EA3546", "#008FF7", "#1BBC52", "#BA53A5", "#E7A000")
+) %>% seecol()
+
+
+c('#25A37C', '#FDB304', '#12ACE6', '#FB5379', '#C08361') %>% seecol()
+
+c('#FA5284', '#3494EE', '#DE59E0', '#899906', '#FEB312') %>% seecol()
+
+c('#EF4067', '#3F89C5', '#B75CDC', '#34963B', '#F5812F') %>% seecol()
+
+```
+
+#### Free as ColorBrewer
+
+		        Dark2	H	C	L	Set2	H	C	L
+1	blue-green	#1b9e77	155	52	58	#66c2a5	162	44	72
+2	orange	    #d95f02	26	113	57	#fc8d62	26	95	70
+3	violet	    #7570b3	268	56	50	#8da0cb	253	41	66
+4	pink	    #e7298a	349	115	52	#e78ac3	331	60	69
+5	green	    #66a61e	115	76	62	#a6d854	108	81	81
+6	yellow	    #e6ab02	57	90	74	#ffd92f	69	95	87
+7	brown	    #a6761d	52	64	53	#e5c494	57	45	81
+8	grey	    #666666	94	0	43	#b3b3b3	94	0	73
+				                55					72
+									
+		        Set1				Pastel1			
+1	red	        #e41a1c	12	152	49	#fbb4ae	17	49	80
+2	blue	    #377eb8	244	62	51	#b3cde3	236	25	81
+3	green	    #4daf4a	127	74	64	#ccebc5	121	30	90
+4	purple	    #984ea3	301	63	45	#decbe4	298	20	84
+5	orange	    #ff7f00	30	122	67	#fed9a6	56	48	89
+6	yellow	    #ffff33	86	103	97	#ffffcc	86	37	99
+7	brown	    #a65628	29	72	46	#e5d8bd	67	24	87
+8	pink	    #f781bf	339	75	69	#fddaec	333	21	90
+                                60                  88
+
+```{r}
+
+RColorBrewer::brewer.pal(8, "Dark2") %>% seecol()
+
+c('#E51C1F', '#1D98B0', '#80AF21', '#BC5A96', '#FB723A', '#E4FA2A', '#A98B07', '#F879AC') %>% seecol()
+
+```
+
+
+
+
+### Sequential
+
+```{r}
+
+colorspace::hcl_palettes("sequential (single-hue)", n = 9, plot = TRUE)
+colorspace::hcl_palettes("sequential (multi-hue)", n = 9, plot = TRUE)
+
+RColorBrewer::brewer.pal.info %>% 
+  .[.$category == "seq", ] %>%
+    tibble::rownames_to_column(var = "palette") %>%
+    apply(., 1, function (x) {
+        n <- as.numeric(x["maxcolors"])
+        pal_name <- as.character(x["palette"]) 
+        RColorBrewer::brewer.pal(n, pal_name) %>% usecol() %>% 
+            `comment<-`(paste(pal_name))
+    }) %>% t() %>% split(1:nrow(.)) %>%
+    `names<-`(rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "seq"]) 
+
+```
+
+### Diverging
+
+```{r}
+
+colorspace::hcl_palettes("diverging", n = 11, plot = TRUE)
+
+```
+
+
+
+
+## Custom HCL Palettes
+
+```{r}
+
+# sequence as in ColorBrewer: qual Set2
+# red blue green purple orange yellow brown 
+# sample in coolors.co
+
+c("#f33d4b", "#2f6690", "#1b998b", "#aa5c95", "#ff7733", "#ffc914", "#e28413") %>% seecol()
+c("#F6514C", "#2e86ab", "#44af69", "#aa45e0", "#fe9920", "#f5d547", "#ba9b21") %>% seecol()
+
+```
+
+
+```{r}
+
+
+# yellow gold
+# orange gold
+# cyan
+
+list(
+    fivethirtyeight1 = c('#EB6A10', '#23A1B9', '#8048ED', '#E60CAD', '#666666'),
+    fivethirtyeight1_hcl = c('#EC6A0A', '#0A9FB7', '#9F79FE', '#FD3EC1', '#919191')
+) %>% seecol()
+
+list(
+  
+  jcolors_default = c('#2FBC26', '#1BA5CC', '#FE7B7B', '#9C98FE', '#D19A0A'),
+  jcolors_pal2 = c('#38A3FC', '#8BA90F', '#FA61DD', '#FE743E', '#08B19F'),
+  jcolors_pal3 = c('#5AB204', '#15AADE', '#FE7263', '#CB7CFC', '#AEA00B'),
+  munsell_5pure = c('#1496AF', '#FE3B57', '#0D9C6F', '#C25CE7', '#A08705'),
+  munsell_10pure = c('#1685B2', '#DB4C06', '#038C74', '#CD3FBA', '#837F0C'),
+  munsell_5mix = c('#0F8EF2', '#D1740C', '#0F9C93', '#F148A1', '#7B960C'),
+  munsell_10mix = c('#16A3AB', '#C2890E', '#A47BFE', '#09AB23', '#FF5487'),
+  beach_toys = c('#2E8AFD', '#4D9E10', '#DC58BF', '#B38407', '#E6623F'),
+  garden_variety = c('#0082B2', '#90780B', '#8B67C5', '#018C4D', '#CA5062'),
+  kids_party = c('#F2AC05', '#F099FE', '#60D109', '#FF9CB5', '#20C8FA'),
+  summerset = c('#7E90FE', '#20B02F', '#F559D8', '#E28007', '#FC695D'),
+  dusk = c('#6575A9', '#8F7405', '#B06060', '#448456', '#797675'),
+  mango_tango = c('#FF8D47', '#1CB8F0', '#D8A301', '#FD77F5', '#4AC345'),
+  lavender_dream = c('#4E598C', '#745817', '#05647E', '#90454E', '#106948'),
+  scientific_report = c('#AB3E3E', '#0067A7', '#815D09', '#6D4DC3', '#2E7A0A'),
+  graph_viz = c('#1DA9A9', '#E17F42', '#C379F1', '#81A503', '#EB7570'),
+  flat_mate = c('#5379A8', '#9D6D2B', '#278664', '#BE5844', '#797774'),
+  something = c('#AC8705', '#5B88EE', '#419C1D', '#EA4CB2', '#E3644D'),
+  something = c('#7C757C', '#B76013', '#158938', '#656ADF', '#1981A2'),
+  awesome_red = c('#FF1F56', '#44960E', '#6975FE', '#F208C3', '#C740FD'),
+  something = c('#AD0353', '#356206', '#2145D8', '#864705', '#A92103'),
+  carrot_day = c('#E95B2D', '#4884FB', '#B28008', '#F54184', '#209E34'),
+  something = c('#51AC43', '#CE76E0', '#D18909', '#6896F9', '#F96597'),
+  something = c('#AB4565', '#4D7229', '#5D5DBE', '#945A2B', '#67676F'),
+  fading_away = c('#95B664', '#9AA8EA', '#E09D64', '#50BDA4', '#EC90AB'),
+  something = c('#719355', '#B072BD', '#429781', '#D26C50', '#538EC0'),
+  something <- c('#2E9ACF', '#D37B27', '#F152B6', '#65A028', '#F8596E'),
+  npg_hcl = c('#FE6D58', '#18A9CC', '#03B08C', '#DE870E', '#99A202'),
+  jungle = c('#2C9C81', '#E96026', '#3492CF', '#B78215', '#7E921E'),
+  something = c('#A63B07', '#592FFD', '#486806', '#AD0B94', '#BD043E'),
+  volcano = c('#C26F10', '#5779FD', '#529410', '#EA0EDC', '#FD2361'),
+  baby_girl = c('#EEBA0B', '#75D90A', '#F9A2FE', '#1CD9B7', '#37D1FB'),
+  fluo_light = c('#F4E316', '#FAD3FE', '#8AFB1E', '#FFDB96', '#20FDBC'),
+  something = c('#A93C96', '#267550', '#B93D30', '#326C9E', '#736923'),
+  something = c('#F266B0', '#37AC6E', '#F37152', '#499CF3', '#AD982C'),
+  something = c('#63BEFD', '#E6AD15', '#B4B6B8', '#73CC0F', '#FE9A9E'),
+  something = c('#36A0E3', '#C39022', '#97999A', '#64AA28', '#E97679'),
+  royal_family = c('#A42208', '#01622E', '#9C0B86', '#923805', '#0D4C8A')
+    
+) %>% seecol()
+
+
+# #0066a7, #a2c7df, #f5f5e6
+# #f5f5e6, #e0b9b9, #ac3f3f
+c('#0066a7', '#4b81b7', '#759dc6', '#9ebad4', '#c8d8df', '#f5f5e6', '#e9d0c7', '#ddaca6', '#cf8883', '#be6561', '#ac3f3f') %>% seecol()
+
+
+
+
+```
+
+
+```{r}
+
+list(
+  c('#4e8273', '#598f80', '#659c8e', '#73a99b', '#81b6a9', '#92c3b7', '#a4d0c5', '#b7ddd4', '#cde9e2', '#e5f4f0', '#ffffff'),
+  c('#002a33', '#103d4a', '#255060', '#3d6474', '#557987', '#6f8e98', '#8aa4a9', '#a6bab8', '#c3d1c6', '#e1e8d4', '#ffffe0'),
+  sci_reports_1 = c('#ac3f3f', '#bd625e', '#cb837d', '#d8a49d', '#e1c5bc', '#e8e8d7', '#bcced6', '#95b3ce', '#6f99c3', '#477fb6', '#0066a7'),
+  sci_reports_2 = c('#00abab', '#49b9b8', '#70c6c4', '#94d3cf', '#badfd6', '#e8e8d7', '#ecd0b7', '#ebb896', '#e6a276', '#df8b56', '#d67535'),
+  jpr_theme = c('#1952a5', '#20639f', '#227596', '#218688', '#159873', '#4fa551', '#8cac36', '#bfb02b', '#f1b034')
+) %>% seecol()
+
+```
+
+
+### Random palettes
+
+```{r}
+
+ggthemes::calc_pal()(10) %>%
+{ . ->> tmp } %>%
+    scales::show_col()
+
+tmp %>% 
+    colorspace::hex2RGB() %>%
+    as(., "polarLUV") %>% .@coords %>% 
+    .[order(.[,1]), ]
+    round(0)
+
+```
+
+
+
+### HCL palettes
+
+http://colorspace.r-forge.r-project.org/articles/hcl_palettes.html
+
+
+```{r}
+
+# HCL palettes
+hcl.pals()
+colorspace::hcl_palettes()
+
+colorspace::hcl_palettes("qualitative", n = 7, plot = TRUE)
+colorspace::hcl_palettes("sequential (single-hue)", n = 7, plot = TRUE)
+colorspace::hcl_palettes("sequential (multi-hue)", n = 7, plot = TRUE)
+colorspace::hcl_palettes("diverging", n = 7, plot = TRUE)
+
+```
+
+### ColorBrewer Palettes
+
+```{r}
+
+# RColorBrewer
+# RColorBrewer::display.brewer.all()
+
+
+rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "qual"] %>% 
+    `names<-`(paste0("pal", 1:length(.)))
+RColorBrewer::brewer.pal.info %>% 
+  .[.$category == "qual", ] %>%
+    tibble::rownames_to_column(var = "palette") %>%
+    apply(., 1, function (x) {
+        n <- as.numeric(x["maxcolors"])
+        pal_name <- as.character(x["palette"]) 
+        RColorBrewer::brewer.pal(n, pal_name) %>% usecol() %>% 
+            `comment<-`(paste(pal_name))
+    }) %>% 
+    `names<-`(rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "qual"]) %>%
+    unikn::seecol(., col_brd = "white", lwd_brd = 4, 
+                  title = "ColorBrewer palettes - qualitative")
+
+
+rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "seq"] %>% 
+    `names<-`(paste0("pal", 1:length(.)))
+RColorBrewer::brewer.pal.info %>% 
+  .[.$category == "seq", ] %>%
+    tibble::rownames_to_column(var = "palette") %>%
+    apply(., 1, function (x) {
+        n <- as.numeric(x["maxcolors"])
+        pal_name <- as.character(x["palette"]) 
+        RColorBrewer::brewer.pal(n, pal_name) %>% usecol() %>% 
+            `comment<-`(paste(pal_name))
+    }) %>% t() %>% split(1:nrow(.)) %>%
+    `names<-`(rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "seq"]) %>%
+    unikn::seecol(., col_brd = "white", lwd_brd = 4, 
+                  title = "ColorBrewer palettes - sequential")
+
+rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "div"] %>% 
+    `names<-`(paste0("pal", 1:length(.)))
+RColorBrewer::brewer.pal.info %>% 
+  .[.$category == "div", ] %>%
+    tibble::rownames_to_column(var = "palette") %>%
+    apply(., 1, function (x) {
+        n <- as.numeric(x["maxcolors"])
+        pal_name <- as.character(x["palette"]) 
+        RColorBrewer::brewer.pal(n, pal_name) 
+    }) %>% t() %>% split(1:nrow(.)) %>%
+    `names<-`(rownames(RColorBrewer::brewer.pal.info)[RColorBrewer::brewer.pal.info$category == "div"]) %>%
+    unikn::seecol(., col_brd = "white", lwd_brd = 4, 
+                  title = "ColorBrewer palettes - divergent")
+```
+
+### Viridis Palettes
+
+Viridis palettes are included in HCL palettes
+
+```{r, eval=FALSE}
+
+# Viridis
+library(viridis)
+c1 <- viridis(12)
+c2 <- magma(12)
+c3 <- inferno(12)
+c4 <- plasma(12)
+c5 <- cividis(12)
+unikn::seecol(list(c1, c2, c3, c4, c5), col_brd = "white", lwd_brd = 4,
+title = "Various viridis color palettes (n = 20)")
+
+```
+
+### ggthemes palettes
+
+```{r}
+
+ggthemes::ggthemes_data %>% names()
+
+pal_name <- "solarized"
+
+tmp <- ggthemes::ggthemes_data %>% .[[pal_name]] %>% lapply(., "[", "value") %>% lapply(is.data.frame) %>% unlist()
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% lapply(., "[", "value") %>% .[tmp] %>% lapply(t) %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " palettes"))
+
+
+pal_name <- "ptol"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .[[1]] %>%
+    seecol(title = paste0("ggthemes ", pal_name, " palettes"))
+
+pal_name <- "calc"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .[["colors"]] %>% .$value %>%
+    seecol(title = paste0("ggthemes ", pal_name, " palettes"))
+
+
+pal_name <- "tableau"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .$'color-palettes' %>% 
+    .$regular %>% lapply("[", "value") %>% lapply(t) %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " regular palettes"))
+
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .$'color-palettes' %>% 
+    .$'ordered-diverging' %>% lapply("[", "value") %>% lapply(t) %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " ordered-diverging palettes"))
+
+
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .$'color-palettes' %>% 
+    .$'ordered-sequential' %>% lapply("[", "value") %>% lapply(t) %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " ordered-sequential palette"))
+
+
+pal_name <- "few"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .$colors %>%
+    lapply("[", "value") %>% lapply(t) %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " palette"))
+
+pal_name <- "manyeyes"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% 
+    seecol(title = paste0("ggthemes ", pal_name, " palette"))
+
+pal_name <- "gdocs"
+ggthemes::ggthemes_data %>% .[[pal_name]] %>% .$colors %>%
+    seecol(title = paste0("ggthemes ", pal_name, " palette"))
+
+
+
+```
+
+
+### ggsci palettes
+
+```{r}
+
+library(ggsci)
+
+c("NPG", "AAAS", "NEJM", "Lancet", "JAMA", "JCO", "LocusZoom") %>%
+    `names<-`(paste0("pal", 1:length(.)))
+
+list(
+    pal_npg("nrc")(10),
+    pal_aaas("default")(10),
+    pal_nejm("default")(8),
+    pal_lancet("lanonc")(9),
+    pal_jama("default")(7),
+    pal_jco("default")(10),
+    pal_locuszoom("default")(7)
+) %>%
+    seecol(., col_brd = "white", lwd_brd = 2, 
+           title = "ggsci palettes")
+
+
+c("D3.20", "D3.20b",  "D3.20c") %>%
+    `names<-`(c("pal1-2", "pal3-6", "pal7-11"))
+
+list(
+    pal_d3("category20")(20)[1:10],
+    pal_d3("category20")(20)[11:20],
+    pal_d3("category20b")(20)[1:5],
+    pal_d3("category20b")(20)[6:10],
+    pal_d3("category20b")(20)[11:15],
+    pal_d3("category20b")(20)[16:20],
+    pal_d3("category20c")(20)[1:5],
+    pal_d3("category20c")(20)[6:10],
+    pal_d3("category20c")(20)[11:15],
+    pal_d3("category20c")(20)[16:20]
+) %>%
+    seecol(., col_brd = "white", lwd_brd = 2, 
+           title = "ggsci D3 palettes")
+
+```
+
+
+### pals bivariate palettes
+
+```{r}
+
+# Discrete
+# pal.bands(alphabet, alphabet2, cols25, glasbey, kelly, polychrome, stepped, tol, watlington,
+#           main="Discrete", show.names=FALSE)
+
+# Bivariate
+bivcol <- function(pal){
+  tit <- substitute(pal)
+  pal <- pal()
+  ncol <- length(pal)
+  nx <- sqrt(length(pal))
+  image(matrix(1:ncol, nrow=sqrt(ncol)), axes=FALSE, col=pal)
+  mtext(tit)
+}
+op <- par(mfrow=c(3,4), mar=c(1,1,2,1))
+bivcol(stevens.pinkgreen)
+bivcol(stevens.bluered)
+bivcol(stevens.pinkblue)
+bivcol(stevens.greenblue)
+bivcol(stevens.purplegold)
+bivcol(brewer.orangeblue)
+bivcol(brewer.pinkblue)
+bivcol(tolochko.redblue)
+bivcol(arc.bluepink)
+bivcol(census.blueyellow)
+```
+
+
+### HCL from hcl.pals("divergingx")
+
+```{r}
+
+list(
+    hcl.colors(n = 11, palette = "Fall"),
+    hcl.colors(n = 11, palette = "Geyser"),
+    hcl.colors(n = 11, palette = "Berlin"),
+    hcl.colors(n = 11, palette = "Zissou 1"),
+    hcl.colors(n = 11, palette = "Teal Rose"),
+    hcl.colors(n = 11, palette = "Temps")
+) %>%
+    seecol(., col_brd = "white", lwd_brd = 2, 
+           title = "More diverging HCL palettes")
+       
+```
+
+### Yarrr palettes
+
+```{r}
+
+library(yarrr)
+#yarrr::piratepal()
+
+list(
+    yarrr::piratepal(palette = "basel"),
+    yarrr::piratepal(palette = "appletv"),
+    yarrr::piratepal(palette = "espresso"),
+    yarrr::piratepal(palette = "info")
+) %>% 
+    seecol(., col_brd = "white", lwd_brd = 2, 
+           title = "Yarrr palettes")
+
+```
+
+
+### Famous colorblind-friendly palette by Okabe & Ito
+
+```{r}
+
+# The palette with grey:
+pal_okabe_ito <- newpal(col = c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"),
+                        names = c("gray60", "orange", "skyblue", "green", "yellow", "blue", "vermillion", "purple"))
+seecol(pal_okabe_ito, hex=TRUE,
+       title = "Color-blind friendly color scale (Okabe & Ito, 2002)")
+    
+# The palette with black:
+# cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+### Simple distinct color palette
+
+```{r}
+
+pal_sashat <- newpal(col = c("#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
+                                "#42d4f4", "#f032e6", "#fabebe", "#469990", "#e6beff",
+                                "#9A6324", "#fffac8", "#800000", "#aaffc3", "#000075",
+                                "#a9a9a9", "#ffffff", "#000000"),
+                        names =c("spanish crimson red", "wagingen green", 
+                                 "vivid yellow", "royal blue", "princeton orange", 
+                                 "medium turquoise", "razzle dazzle rose", "spanish pink", 
+                                 "zomp cyan", "electric lavender", "golden brown", 
+                                 "lemon chiffon beige",  "maroon red", "magic mint", 
+                                 "navy blue", "dark medium grey", "white", "registration black"))
+seecol(pal_sashat, hex=TRUE,
+       title = "Simple, distinct color palette")
+
+```
+
+## Create palettes with `visibly`
+
+```{r}
+
+library(visibly)
+
+create_palette("#0058A1", toHCL = TRUE, plot = FALSE)
+create_palette("#0058A1", toHCL = TRUE, plot = TRUE)
+
+create_palette("#f2b035", plot = TRUE)
+
+```
+
+```{r}
+
+library(colorspace)
+
+# http://colorspace.r-forge.r-project.org/articles/hclwizard.html
+
+# polarLUV() (= HCL), LUV(), polarLAB(), LAB(), XYZ(), RGB(), sRGB(), HLS(), HSV()
+
+# demo("brewer", package = "colorspace")
+
+demoplot(qualitative_hcl(4, "Dark 3"), type = "lines")
+demoplot(sequential_hcl(4, "Viridis"), type = "spine")
+demoplot(diverging_hcl(5, "Blue-Red 2"), type = "bar")
+demoplot(qualitative_hcl(4, "Set 2"), type = "scatter")
+
+oi <- c("#61A9D9", "#ADD668", "#E6D152", "#CE6BAF", "#797CBA")
+swatchplot(
+  "-40%" = lighten(oi, 0.4),
+  "-20%" = lighten(oi, 0.2),
+  "  0%" = oi,
+  " 20%" =  darken(oi, 0.2),
+  " 40%" =  darken(oi, 0.4),
+  off = c(0, 0)
+)
+```
+
+
+
+
+top selected palettes from other packages
+
+.. continue to source from https://github.com/EmilHvitfeldt/paletteer
+   @ line - ghibli
+
+```{r}
+
+# distinct
+list(
+  c("#F7DC05", "#3d98d3", "#EC0B88", "#5e35b1", "#f9791e", "#3dd378", "#c6c6c6", "#444444"),
+  c("#017a4a", "#FFCE4E", "#3d98d3", "#ff363c", "#7559a2", "#794924", "#8cdb5e", "#d6d6d6", "#fb8c00"),
+  c("#9F248F", "#FFCE4E", "#017a4a", "#f9791e", "#244579", "#c6242d"),
+  c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+) %>% 
+    `names<-`(c("primary_awtools", "flat_awtools", "secondary_awtools", "___")) %>%
+  seecol()
+
+# continuous
+list(
+  c("#2A363B", "#019875", "#99B898", "#FECEA8", "#FF847C", "#E84A5F", "#C0392B", "#96281B")
+) %>% 
+  seecol()
+
+# grey / mono
+list(
+  c("#d6d6d6", "#adadad", "#707070", "#333333")
+) %>% 
+  seecol()
+
+# large
+c("#c62828", "#f44336", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "#29b6f6", "#006064", "#009688", "#4caf50", "#8bc34a", "#ffeb3b", "#ff9800", "#795548", "#9e9e9e", "#607d8b")
+c("#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabebe", "#469990", "#e6beff", "#9A6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#a9a9a9", "#ffffff", "#000000")
+
+```
+
+
+
+
+
+Tableau palettes
+
+https://jrnold.github.io/ggthemes/reference/tableau_color_pal.html
+
+```{r}
+tableau_color_pal(palette = "Tableau 10", type = c("regular",
+  "ordered-sequential", "ordered-diverging"), direction = 1)
+ 
+```
+
+
+Shades
+https://github.com/jonclayden/shades
+
+
+
+
+
+
+
+
+
+```{r}
+
+#786627
+#BB611D
+#564933
+
+col_vector <- c("#155673", "#B66C1A", "#297b18")
+col_vector <- c("#786627", "#564933", "#376A5D", "#BB611D")
+col_vector <- c("#264BAC", "#9B2047", "#F1F1F1")
+col_vector <- c("#344E3F", "#F0880F", "#1D838A")
+
+col_pos_1 <- col_vector[1]
+
+col_class <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB")
+col_coord <- col_class@coords
+
+m1 <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords %>%
+  dist(method="euclidean") %>% as.matrix() %>% 
+  `colnames<-`(col_vector) %>% 
+  `rownames<-`(col_vector) %>%
+  reshape2::melt() 
+
+pair_list <- list()
+for (i in seq_along(col_vector)) {
+
+  if (i > 1) {
+    prev_col <- pair_list[[i - 1]] %>% .[, "Var2"] %>% as.character()
+    prev_cols <- pair_list %>% do.call(cbind,. ) %>% 
+      .[, "value" != names(.)] %>%
+      apply(., 1, unique) %>%
+      as.character() %>%
+      .[-length(.)]
+  }
+  
+  if (i == 1) {
+    pair_list[[i]] <- m1 %>% 
+      dplyr::filter(Var1 %in% col_pos_1) %>%
+      dplyr::filter(value == max(value)) 
+    } else {
+      pair_list[[i]] <- m1 %>% 
+        dplyr::filter(Var1 %in% prev_col) %>%
+        dplyr::filter(!Var2 %in% prev_cols) %>%
+        dplyr::filter(value == max(value)) 
+      } 
+}
+
+pair_list %>% do.call(cbind,. ) %>% 
+  .[, "value" != names(.)] %>%
+  apply(., 1, unique) %>% 
+  seecol()
+
+```
+
+
+
+```{r}
+library('rwantshue')
+
+col_vector <- c("#155673")
+col_coord <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords
+
+col_coord
+
+scheme <- iwanthue(seed = 41, force_init = TRUE)
+color_space <- list(
+	c(0, 210),	# hue range [0,360]
+	c(col_coord[, "C"]-10, col_coord[, "C"]+10),		# chroma range [0,100]
+	c(col_coord[, "L"]-10, col_coord[, "L"]+10))		# lightness range [0,100]
+palette <- scheme$hex(
+	n = 2,
+	force_mode = FALSE,
+	quality = 100,
+	color_space = color_space)
+
+c(col_vector, palette) %>% seecol()
+
+```
+
+
+hues:
+https://github.com/johnbaums/hues
+fixed center for kmeans:
+https://stackoverflow.com/questions/57933767/k-means-cluster-analysis-in-r-setting-only-one-center-leaving-the-other-center
+https://stackoverflow.com/questions/33399000/refitting-clusters-around-fixed-centroids
+
+
+```{r}
+
+
+
+col_vector <- c("#155673")
+
+col_vector <- c("#a83a36")
+
+
+col_vector <- c("#A60825")
+
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLUV") %>% .@coords
+
+
+
+c_range <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLUV") %>% .@coords %>% 
+    .[, "C"] %>%
+    `*`(c(0.6, 1.4))
+
+l_range <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLUV") %>% .@coords %>% 
+    .[, "L"] %>%
+    `*`(c(0.6, 1.4))
+
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "LAB") %>% .@coords
+
+n=2
+
+kf <- function(x, clust, nc) {
+    cn <- rbind(clust, x[sample(nrow(x), nc-1),])
+    kmeans(x, cn)
+}
+
+lab <- colorspace::LAB(as.matrix(
+    expand.grid(seq(0, 100, 1), seq(-100, 100, 5), seq(-110, 100, 5))))
+hcl <- as(lab, 'polarLUV')
+
+hcl_coords <- colorspace::coords(hcl)
+
+hmin=0; hmax=360; cmin=c_range[1]; cmax=c_range[2]; lmin=l_range[1]; lmax=l_range[2]
+hcl <- hcl[which(hcl_coords[, 'H'] <= hmax & hcl_coords[, 'H'] >= hmin &
+                       hcl_coords[, 'C'] <= cmax & hcl_coords[, 'C'] >= cmin & 
+                       hcl_coords[, 'L'] <= lmax & hcl_coords[, 'L'] >= lmin), ]
+
+lab <- lab[which(!is.na(colorspace::hex(lab))), ]
+
+
+
+# stats::kmeans(colorspace::coords(lab), n, iter.max=50)
+
+
+m <- colorspace::coords(lab)
+
+c1 <- c(41, 45, 27)
+
+m_ext <- matrix(rep(c1+0.1, 300000), ncol=3, byrow = TRUE)
+
+m %<>% rbind(., m_ext)
+
+
+l <- replicate(100, kf(m, c1, 2), simplify=FALSE)
+bss <- sapply(l, '[[', "betweenss")
+table(signif(bss, 4))
+
+# 538.6 602.5 
+#    37    63 
+kmo <- l[[which.max(bss)]]
+
+kmo$centers
+
+```
+
+```{r}
+
+
+
+col_vector <- c("#155673")
+
+col_vector <- c("#a83a36")
+
+
+col_vector <- c("#A60825")
+
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLUV") %>% .@coords
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "LAB") %>% .@coords
+
+
+c_range <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords %>% 
+    .[, "C"] %>%
+    `*`(c(0.6, 1.4))
+
+l_range <- colorspace::hex2RGB(col_vector) %>%
+  as(., "polarLAB") %>% .@coords %>% 
+    .[, "L"] %>%
+    `*`(c(0.6, 1.4))
+
+
+colorspace::hex2RGB(col_vector) %>%
+  as(., "LAB") %>% .@coords
+
+n=2
+
+kf <- function(x, clust, nc) {
+    cn <- rbind(clust, x[sample(nrow(x), nc-1),])
+    kmeans(x, cn)
+}
+
+lab <- colorspace::LAB(as.matrix(
+    expand.grid(seq(0, 100, 1), seq(-100, 100, 5), seq(-110, 100, 5))))
+hcl <- as(lab, 'polarLAB')
+
+hcl_coords <- colorspace::coords(hcl)
+
+hmin=0; hmax=360; cmin=c_range[1]; cmax=c_range[2]; lmin=l_range[1]; lmax=l_range[2]
+hcl <- hcl[which(hcl_coords[, 'H'] <= hmax & hcl_coords[, 'H'] >= hmin &
+                       hcl_coords[, 'C'] <= cmax & hcl_coords[, 'C'] >= cmin & 
+                       hcl_coords[, 'L'] <= lmax & hcl_coords[, 'L'] >= lmin), ]
+
+lab <- as(hcl, 'LAB')    
+lab <- lab[which(!is.na(colorspace::hex(lab))), ]
+
+
+
+# stats::kmeans(colorspace::coords(lab), n, iter.max=50)
+
+
+m <- colorspace::coords(lab)
+
+c1 <- c(34, -9, -22)
+
+m_ext <- matrix(rep(c1+0.1, 100000), ncol=3, byrow = TRUE)
+
+m %<>% rbind(., m_ext)
+
+
+l <- replicate(100, kf(m, c1, 2), simplify=FALSE)
+bss <- sapply(l, '[[', "betweenss")
+table(signif(bss, 4))
+
+# 538.6 602.5 
+#    37    63 
+kmo <- l[[which.max(bss)]]
+
+kmo$centers
+
+```
+
+
+```{r}
+
+library("plot3D")
+scatter3D(x=m[,1], y=m[,2], z=m[,3])
+
+```
+
+
+
+
+
+RWantsHue
+https://medialab.github.io/iwanthue/
+https://medialab.github.io/iwanthue/examples/
+
+
+
+https://learnui.design/tools/data-color-picker.html
+
+https://projects.susielu.com/viz-palette
+
+
+```{r rwantshue, eval = FALSE}
+
+library('rwantshue')
+
+# create a color scheme object
+scheme <- iwanthue() # get the iwanthue singleton
+scheme <- iwanthue(seed = 42, force_init = TRUE) # recreate with a seed
+
+# generate a new color palette (vector of hex values) with presets...
+scheme$hex(10)
+scheme$hex(10, color_space = hcl_presets$fluo)
+
+# ... or make custom adjustments:
+color_space <- list(
+	c(330, 360),	# hue range [0,360]
+	c(0, 100),		# chroma range [0,100]
+	c(0, 100))		# lightness range [0,100]
+palette <- scheme$hex(
+	n = 8,
+	force_mode = FALSE,
+	quality = 50,
+	color_space = color_space)
+	
+# use it in a plot
+plot(1:8, col = scheme$hex(8), pch = 16, cex = 10)
+
+# You can also fetch a rgb matrix
+scheme$rgb(8)
+
+
+```
+
+
+
+
+
+
+
+
+
