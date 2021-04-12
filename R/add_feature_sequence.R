@@ -24,7 +24,8 @@ add_feature_sequence <- function (object) {
     if (organism == "Mus musculus") {org_db <- dator:::uniprot_mouse}
 
     n <- autonomics.import::fdata(object)$feature_uniprot %>% length() %>%
-        `/`(95) %>% ceiling() %>%
+        magrittr::divide_by(95) %>%
+        ceiling() %>%
         seq_len()
 
     suppressWarnings(

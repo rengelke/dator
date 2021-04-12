@@ -31,8 +31,8 @@ read_olink <- function (file) {
 
 
     svar_rows	= object_raw[, 1] %>% grep(pattern = "Assay")
-    svar_cols	= (object_raw[svar_rows, ] %>% grep(pattern = "Plate ID") %>% .[1]):
-        length(object_raw[svar_rows, ])
+    svar_cols	= (object_raw[svar_rows, ] %>%
+                     grep(pattern = "Plate ID") %>% .[1]):length(object_raw[svar_rows, ])
 
     fid_rows = object_raw[, 1] %>% grep(pattern = "OlinkID")    #according to fid_var
     fid_cols = 2:(object_raw[svar_rows, ] %>% grep(pattern = "Plate ID") %>% .[1] %>% `-`(1))
@@ -70,7 +70,7 @@ read_olink <- function (file) {
     sids1 <- object_raw[sid_rows, sid_cols] %>% as.character()
 
     exprs1 <- object_raw[expr_rows, expr_cols] %>%
-        data.matrix() %>% t() %>%
+        apply(., 2, as.numeric) %>% t() %>%
         `rownames<-`(fids1 %>% make.names(unique = TRUE)) %>%
         `colnames<-`(sids1)
 
@@ -94,7 +94,8 @@ read_olink <- function (file) {
         if ("Missing_Data_freq" %in% fvars1) {
             fdata1$Missing_Data_freq %<>%
                 stringr::str_replace("\\%", "") %>%
-                as.numeric() %>% `/`(100)
+                as.numeric() %>%
+                magrittr::divide_by(100)
         }
     }
 
@@ -113,13 +114,12 @@ read_olink <- function (file) {
             paste0(., c("_Inc_Ctrl", "_Det_Ctrl"))
         sdata1 %<>% cbind(object_raw[sdata_rows, sdata_cols], stringsAsFactors = FALSE) %>%
             `colnames<-`(c("sample_id", svars1)) %>%
+            .[, colnames(.) != "NA"] %>%
             data.frame(stringsAsFactors = FALSE, check.names = FALSE)
 
-        if ("QC_Deviation_from_median_Inc_Ctrl" %in% svars1) {
-            sdata1$QC_Deviation_from_median_Inc_Ctrl %<>% as.numeric()
-        }
-        if ("QC_Deviation_from_median_Inc_Ctrl" %in% svars1) {
-            sdata1$QC_Deviation_from_median_Det_Ctrl %<>% as.numeric()
+        if (svars1 %>% grepl("QC_Deviation", .) %>% any()) {
+            sdata1 %<>% dplyr::mutate_at(dplyr::vars(matches("QC_Deviation")),
+                                         as.numeric)
         }
     }
 

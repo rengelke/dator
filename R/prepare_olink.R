@@ -1,30 +1,13 @@
-
-
-# file <- "C:/Users/rue2006/Documents/R_wd/mazloum_mouse/data/20200203_WCQO-20-001B/20200203_WCQO-20-001B.csv"
-# object <- read_olink(file)
-#
-# filter_sample_type = c("Sample")
-# filter_feature_type = c("Protein")
-# filter_sample_quality = c("Warning", "Pass")
-# filter_feature_quality = 1.0
-# rm_features_below_lod_for_some_sample = TRUE
-#
-# rm_complete_feature_nondetects = TRUE
-# rm_complete_sample_nondetects = TRUE
-# rm_single_value_svars = FALSE
-# rm_single_value_fvars = FALSE
-
-
 #' Prepare Olink
 #'
 #' @param object SummarizedExperiment
 #' @param filter_sample_type string vector: sample  types to be filtered for. Subset of c('Sample', 'Control').
 #' @param filter_feature_type string vector: feature types to be filtered for. Subset of c('Protein', 'Control')
-#' @param filter_sample_quality string vector: sample  qualities to be filtered for. Subset of c('Pass', 'Warning')
+#' @param filter_sample_quality string vector: sample qualities for which values should not be replaced with NA. Subset of c('Pass', 'Warning')
 #' @param filter_feature_quality number: fraction 0-1 indicating missing data frequency cutoff
-#' @param rm_features_below_lod_for_some_sample logical: wether to remove values below limit of detection (LOD); if FALSE values below LOD are filled with 0.5*LOD
-#' @param rm_complete_feature_nondetects logical: wether to remove complete feature nondetects
-#' @param rm_complete_sample_nondetects logical: wether to remove complete sample nondetects
+#' @param rm_features_below_lod_for_some_sample logical: whether to remove values below limit of detection (LOD); if FALSE values below LOD are filled with 0.5*LOD
+#' @param rm_complete_feature_nondetects logical: whether to remove complete feature nondetects
+#' @param rm_complete_sample_nondetects logical: whether to remove complete sample nondetects
 #' @param rm_single_value_svars logical:  whether to remove single value svars
 #' @param rm_single_value_fvars logical:  whether to remove single value fvars
 #'
@@ -87,9 +70,20 @@ prepare_olink <- function (object,
     }
 
     if ("QC_Warning" %in% autonomics.import::svars(object)) {
-        idx <- autonomics.import::sdata(object)$QC_Warning %in% filter_sample_quality
-        idx <- idx & !is.na(idx)
-        object %<>% magrittr::extract(, idx)
+        plates <- autonomics.import::fdata(object)$Panel %>% unique()
+        n_plates <- length(plates)
+        warn_idx <- autonomics.import::sdata(object) %>%
+            colnames() %>%
+            grep("QC_Warning", .)
+        exprs1 <- autonomics.import::exprs(object)
+        for (i in seq_len(n_plates)) {
+            idx2 <- autonomics.import::sdata(object)[, warn_idx[i]] %in% filter_sample_quality
+            idx2 <- idx2 & !is.na(idx2)
+            idx1 <- autonomics.import::fdata(object)$Panel %in% plates[i]
+            idx1 <- idx1 & !is.na(idx1)
+            exprs1[idx1, !idx2] <- NA
+        }
+        autonomics.import::exprs(object) <- exprs1
     }
 
     if ("Missing_Data_freq" %in% autonomics.import::fvars(object)) {
@@ -110,7 +104,7 @@ prepare_olink <- function (object,
         exprs(object) %>% apply(., 2, function (x) {
             idx <- (x <= fdata(object)$LOD)
             idx <- idx & !is.na(idx)
-            x[idx] <- 0.5*fdata(object)$LOD[idx]
+            x[idx] <- (fdata(object)$LOD[idx] - 1)
             x
         })
     }
