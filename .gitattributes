@@ -1,0 +1,9 @@
+*.Rmd linguist-language=R
+*.htm linguist-generated
+*.html linguist-generated
+*.rds linguist-generated
+*.pdf linguist-generated
+*.tex linguist-generated
+*.eps linguist-generated
+*.bib linguist-generated
+*.csl linguist-generated
